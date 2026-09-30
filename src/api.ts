@@ -1,40 +1,52 @@
 export interface AuthSession {
   authenticated: boolean;
   csrfToken: string;
-  authMode: "development" | "university-disabled";
+  authMode: "development" | "university-disabled" | "university";
 }
-export interface Profile {
-  id: string;
-  displayName: string;
-  identityProvider: "development";
-  membership: {
-    status: "active" | "inactive";
-    roleLabel: string;
-    verifiedUntil: string | null;
-  };
-  minecraft: { uuid: string; name: string } | null;
-  discordReference: {
-    id: string;
-    verificationStatus: "self_reported";
-    updatedAt: string;
-  } | null;
-  csrfToken: string;
-}
-export interface LinkSession {
-  id: string;
-  minecraftName: string;
-  minecraftUuid: string;
-  status: "pending" | "linked";
-  expiresAt: string;
-  webConfirmed: boolean;
-  gameConfirmed: boolean;
-}
-export interface Server {
-  id: string;
-  label: string;
-}
-
 const messages: Record<string, string> = {
+  university_provider_not_configured:
+    "이 환경은 학교 로그인이 아직 연결되지 않았습니다.",
+  university_login_required:
+    "관리 기능을 사용하려면 학교 계정으로 다시 로그인해 주세요.",
+  university_state_invalid:
+    "학교 로그인 요청을 확인하지 못했습니다. 다시 시작해 주세요.",
+  university_request_expired:
+    "학교 로그인 요청이 만료되었습니다. 다시 시작해 주세요.",
+  university_request_consumed:
+    "이미 사용한 로그인 요청입니다. 다시 시작해 주세요.",
+  university_token_consumed:
+    "이미 사용한 인증 응답입니다. 학교 로그인을 다시 진행해 주세요.",
+  university_verification_failed:
+    "학교 인증을 확인하지 못했습니다. 다시 로그인해 주세요.",
+  admin_host_required: "관리자 전용 주소에서 접속해 주세요.",
+  admin_required: "이 계정에는 운영자 권한이 없습니다.",
+  mfa_required:
+    "추가 인증이 만료되었습니다. 인증 앱의 코드를 다시 입력해 주세요.",
+  mfa_invalid:
+    "인증 코드가 올바르지 않거나 이미 사용되었습니다. 새 코드를 입력해 주세요.",
+  mfa_locked:
+    "인증 실패가 반복되어 15분 동안 잠겼습니다. 이후 다시 시도해 주세요.",
+  bootstrap_invalid: "최초 운영자 등록 코드가 올바르지 않습니다.",
+  admin_enrollment_closed:
+    "최초 운영자 등록이 종료되었습니다. 계정 권한을 확인해 주세요.",
+  invalid_server_scope:
+    "사용할 수 없는 서버 범위입니다. 목록을 새로고침해 주세요.",
+  subject_not_found: "회원을 찾을 수 없습니다. 목록을 새로고침해 주세요.",
+  minecraft_not_linked: "이미 Minecraft 연결이 해제된 회원입니다.",
+  approval_required:
+    "명부 변경에 확인이 필요합니다. 미리보기를 확인한 뒤 승인해 주세요.",
+  approval_mismatch:
+    "미리보기 이후 명부가 변경되었습니다. 새 미리보기를 확인해 주세요.",
+  sync_busy: "다른 동기화가 진행 중입니다. 잠시 후 다시 확인해 주세요.",
+  configuration_error:
+    "명부 조회 설정이 준비되지 않았습니다. 서버 설정을 확인해 주세요.",
+  read_failed: "회원 명부를 읽지 못했습니다. 기존 명부는 유지됩니다.",
+  invalid_snapshot: "명부 형식이 올바르지 않아 반영하지 않았습니다.",
+  stale_snapshot:
+    "명부 확인 결과가 만료되었습니다. 다시 미리보기를 진행해 주세요.",
+  outdated_snapshot:
+    "더 새로운 명부가 이미 반영되었습니다. 다시 확인해 주세요.",
+  apply_failed: "명부를 반영하지 못했습니다. 동기화 상태를 확인해 주세요.",
   session_required: "로그인이 만료되었습니다. 다시 로그인해 주세요.",
   link_consumed:
     "이미 사용되거나 취소된 링크입니다. 게임에서 새 링크를 받아 주세요.",
@@ -72,6 +84,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
+    public details: unknown = null,
   ) {
     super(
       messages[code] ??
@@ -125,7 +138,7 @@ export async function api<T>(
       payload && typeof payload === "object" && "code" in payload
         ? String(payload.code)
         : "request_failed";
-    throw new ApiError(response.status, code);
+    throw new ApiError(response.status, code, payload);
   }
   if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
@@ -135,8 +148,6 @@ export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "요청을 처리하지 못했습니다.";
 }
 
-export function validDiscordId(value: string): boolean {
-  return (
-    /^[1-9][0-9]{0,19}$/.test(value) && BigInt(value) <= 18446744073709551615n
-  );
+export function callbackError(code: string): string {
+  return messages[code] ?? "학교 로그인에 실패했습니다. 다시 시도해 주세요.";
 }

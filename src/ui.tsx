@@ -35,9 +35,11 @@ export function Brand({ large = false }: { large?: boolean }) {
 export function DevelopmentStrip({
   development,
   loading = false,
+  university = false,
 }: {
   development: boolean;
   loading?: boolean;
+  university?: boolean;
 }) {
   return (
     <div className="development-strip">
@@ -46,7 +48,9 @@ export function DevelopmentStrip({
           ? "Passport 개발 환경 · 가상 회원 데이터"
           : loading
             ? "Passport · 인증 상태 확인 중"
-            : "Passport · 학교 인증 준비 중"}
+            : university
+              ? "Passport · 운영자 관리"
+              : "Passport · 학교 인증 준비 중"}
       </span>
       <span className="strip-detail">
         {development ? "실제 학교 인증 아님" : "OVERWORLD"}
@@ -67,6 +71,7 @@ export function AppShell({
   displayName,
   description,
   development,
+  university = false,
   onLogout,
   busy,
   children,
@@ -78,18 +83,19 @@ export function AppShell({
   displayName: string;
   description: string;
   development: boolean;
+  university?: boolean;
   onLogout?: () => void;
   busy?: boolean;
   children: ReactNode;
 }) {
   return (
     <>
-      <DevelopmentStrip development={development} />
+      <DevelopmentStrip development={development} university={university} />
       <div className="app-shell">
         <aside className="app-sidebar">
           <div className="sidebar-brand">
             <Brand />
-            <p>Overworld {onLogout ? "회원 공간" : "운영 공간"}</p>
+            <p>Overworld 운영 공간</p>
           </div>
           <nav aria-label="주 메뉴">
             {navItems.map((item) => (
@@ -127,9 +133,7 @@ export function AppShell({
           <header className="topbar">
             <span>{title}</span>
             <div className="topbar-right">
-              <span className="topbar-context">
-                {onLogout ? "Overworld 회원 포털" : "관리자 전용"}
-              </span>
+              <span className="topbar-context">관리자 전용</span>
               <span className="avatar">{displayName.slice(0, 1)}</span>
               <strong>{displayName}</strong>
               {onLogout ? (
