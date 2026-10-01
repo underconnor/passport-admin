@@ -10,7 +10,7 @@ const run = promisify(execFile);
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const session = `passport-admin-members-${process.pid}`;
 const future = new Date(Date.now() + 86_400_000).toISOString();
-const member = (i) => ({ id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`, revision: `revision-${i}`, createdAt: '2026-01-01T00:00:00.000Z', administrator: i === 2, admissionYear: '26', displayName: i === 1 ? '가상나래' : `가상 회원 ${String(i).padStart(2, '0')}`, department: '가상 학과', membershipStatus: i % 2 ? 'active' : 'inactive', roleLabel: '회원', verifiedUntil: future, universityVerifiedUntil: future, allowedServerIds: ['fixture'], eligibleServerIds: ['fixture'], accessSuspended: false, scopeRestricted: false, scopeLimit: [], discordId: null, discordConnection: { discordId: `1000000000000000${String(i).padStart(2,'0')}`, username: i === 1 ? 'cosmos' : `discord.member.${i}`, displayName: i === 1 ? '별나래' : `디스코드 ${i}`, linkedAt: future, roleStatus: 'granted', roleUpdatedAt: future }, minecraft: { name: i === 1 ? 'MineQuartz' : `Synthetic${i}`, uuid: `00000000-0000-4000-8000-${String(i + 100).padStart(12, '0')}` } });
+const member = (i) => ({ id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`, revision: `revision-${i}`, createdAt: '2026-01-01T00:00:00.000Z', administrator: i === 2, admissionYear: '26', presence: {online:i===1,serverId:i===1?'fixture':null,serverLabel:i===1?'합성 서버':null,lastSeenAt:future}, displayName: i === 1 ? '가상나래' : `가상 회원 ${String(i).padStart(2, '0')}`, department: '가상 학과', membershipStatus: i % 2 ? 'active' : 'inactive', roleLabel: '회원', verifiedUntil: future, universityVerifiedUntil: future, allowedServerIds: ['fixture'], eligibleServerIds: ['fixture'], accessSuspended: false, scopeRestricted: false, scopeLimit: [], discordId: null, discordConnection: { discordId: `1000000000000000${String(i).padStart(2,'0')}`, username: i === 1 ? 'cosmos' : `discord.member.${i}`, displayName: i === 1 ? '별나래' : `디스코드 ${i}`, linkedAt: future, roleStatus: 'granted', roleUpdatedAt: future }, minecraft: { name: i === 1 ? 'MineQuartz' : `Synthetic${i}`, uuid: `00000000-0000-4000-8000-${String(i + 100).padStart(12, '0')}` } });
 let state;
 const reset = () => { state = { authorized: true, statsReads: [], rows: Array.from({length: 25}, (_, i) => member(i + 1)), reads: [], writes: [], deleteError: null, hold: false, release: null }; };
 const server = http.createServer(async (req, res) => {
@@ -39,7 +39,7 @@ const server = http.createServer(async (req, res) => {
     state.statsReads.push(url.pathname);
     if (!state.authorized) return json(403,{code:'admin_required'});
     const counters={playSeconds:7260,blocksBroken:15000,blocksPlaced:4200,damageTakenMilli:50000,deaths:10,mobKills:380};
-    return json(200,{available:true,totals:counters,servers:[{serverId:'fixture',label:'합성 서버',...counters,playSeconds:3660}],...(url.pathname==='/v1/admin/stats'?{playerCount:25}:{})});
+    return json(200,{available:true,totals:counters,servers:[{serverId:'fixture',label:'합성 서버',...counters,playSeconds:3660,onlinePlayerCount:1}],...(url.pathname==='/v1/admin/stats'?{playerCount:25,onlinePlayerCount:1}:{presence:member(1).presence})});
   }
   if (url.pathname.startsWith('/v1/admin/members/') && ['DELETE','PUT'].includes(req.method)) {
     const input = await body(); state.writes.push({path:url.pathname,method:req.method,input,csrf:req.headers['x-csrf-token']});
@@ -72,7 +72,7 @@ test('compact admin records preserve server-side search and destructive-action s
     await t.test('compact rows expand, inline access editing and server rows work on desktop and mobile',async () => {
       reset();await open(origin);await browser('set','viewport','1440','1000');
       assert.equal(await inspect('document.querySelectorAll(".member-summary").length'),20);
-      assert.equal(await inspect('document.querySelectorAll(".member-expanded").length'),0);
+      assert.equal(await inspect('document.querySelectorAll(".member-expanded").length'),0);assert.equal(await inspect('document.querySelector(".member-presence").textContent'),'접속 중 · 합성 서버');
       await browser('click','.member-summary:first-child');await until('Boolean(document.querySelector(".member-expanded"))');await click('접근 제한 수정');
       assert.equal(await inspect('document.querySelector(".admin-dialog") === null'),true);
       await browser('find','role','checkbox','check','--name','사용자 접근 정지');await click('접근 제한 저장');await until("document.body.textContent.includes('접근 제한을 저장했습니다')");
@@ -107,7 +107,7 @@ test('compact admin records preserve server-side search and destructive-action s
 
     await t.test('admin overall statistics and expanded personal records only request authorized endpoints',async () => {
       reset(); await open(origin); await click('플레이 통계'); await until('document.querySelectorAll(".stats-metric").length === 6');
-      assert.deepEqual(state.statsReads,['/v1/admin/stats']); assert.equal(await inspect('document.querySelector(".stats-metric strong").textContent'),'2시간 1분');
+      assert.deepEqual(state.statsReads,['/v1/admin/stats']); assert.equal(await inspect('document.querySelector(".stats-presence strong").textContent'),'현재 접속 1명'); assert.equal(await inspect('document.querySelector(".stats-metric strong").textContent'),'2시간 1분');
       await browser('set','viewport','1440','900'); await browser('screenshot','/tmp/passport-admin-stats-desktop.png');
       await browser('select','.stats-scope select','fixture'); await until('document.querySelector(".stats-metric strong").textContent === "1시간 1분"');
       await browser('set','viewport','390','844'); assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true); await browser('screenshot','/tmp/passport-admin-stats-mobile.png');

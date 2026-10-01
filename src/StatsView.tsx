@@ -9,10 +9,13 @@ export interface PlayCounters {
   deaths: number;
   mobKills: number;
 }
+export interface PlayerPresence { online: boolean; serverId: string | null; serverLabel: string | null; lastSeenAt: string | null; }
 export interface PlayStatistics {
   available: boolean;
   totals: PlayCounters;
-  servers: ({ serverId: string; label: string } & PlayCounters)[];
+  servers: ({ serverId: string; label: string; onlinePlayerCount?: number } & PlayCounters)[];
+  presence?: PlayerPresence;
+  onlinePlayerCount?: number;
   playerCount?: number;
 }
 const number = (value: number) => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(value);
@@ -50,6 +53,8 @@ export function StatsView({ endpoint, title = "누적 플레이 기록", onError
       : loading ? <div className="panel empty-state" role="status"><h3>플레이 기록을 불러오고 있어요</h3></div>
       : !data?.available ? <div className="panel empty-state"><h3>플레이 기록 집계를 준비하고 있어요</h3><p>서버의 통계 연결이 완료되면 여기에 표시됩니다.</p></div>
       : <><div className="stats-scope"><label htmlFor={`stats-server-${endpoint.replace(/[^a-z0-9]/g, "-")}`}>서버 선택</label><select id={`stats-server-${endpoint.replace(/[^a-z0-9]/g, "-")}`} value={serverId} onChange={event => setServerId(event.target.value)}><option value="">전체 서버</option>{data.servers.map(server => <option key={server.serverId} value={server.serverId}>{server.label}</option>)}</select></div>
+        {data.presence ? <div className={`stats-presence ${data.presence.online ? "is-online" : ""}`} role="status"><span className="presence-dot" /><strong>{data.presence.online ? "접속 중" : "오프라인"}</strong>{data.presence.online && data.presence.serverLabel ? <span>{data.presence.serverLabel}</span> : data.presence.lastSeenAt ? <span>마지막 확인 {new Intl.DateTimeFormat("ko-KR", { dateStyle: "short", timeStyle: "short" }).format(new Date(data.presence.lastSeenAt))}</span> : <span>아직 확인된 접속 기록이 없습니다.</span>}</div> : null}
+        {data.onlinePlayerCount !== undefined ? <div className="stats-presence is-online" role="status"><span className="presence-dot" /><strong>현재 접속 {number(serverId ? data.servers.find(server => server.serverId === serverId)?.onlinePlayerCount ?? 0 : data.onlinePlayerCount)}명</strong><span>{serverId ? data.servers.find(server => server.serverId === serverId)?.label : "전체 서버"}</span></div> : null}
         <div className="stats-grid">{metrics.map(metric => <article className="panel stats-metric" key={metric.label}><span>{metric.label}</span><strong>{metric.value}</strong><small>{metric.unit}</small></article>)}</div>
         {!data.servers.length ? <p className="helper stats-empty">아직 집계된 서버 기록이 없습니다. 연결한 계정으로 플레이하면 기록이 쌓입니다.</p> : null}
       </>}

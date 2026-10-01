@@ -46,6 +46,7 @@ export interface Member {
   createdAt: string;
   administrator: boolean;
   admissionYear: string | null;
+  presence: { online: boolean; serverId: string | null; serverLabel: string | null; lastSeenAt: string | null };
   displayName: string;
   department: string | null;
   membershipStatus: string;

@@ -1614,3 +1614,11 @@ button.member-summary:hover, button.member-summary[aria-expanded=true] { backgro
 @media(max-width:700px) { .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .stats-metric { padding:16px; } .stats-toolbar { flex-wrap:wrap; } }
 
 @media(max-width:700px) { .app-sidebar nav { display:flex; flex-direction:row; overflow-x:auto; gap:4px; padding-bottom:10px; scrollbar-width:thin; } .app-sidebar nav button { flex:0 0 88px; width:88px; } }
+
+.stats-presence { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:14px 16px; margin-bottom:16px; background:var(--surface); border:1px solid var(--border); border-radius:8px; font-size:12px; }
+.stats-presence strong { font-size:13px; font-weight:600; }
+.stats-presence > span:last-child { color:var(--muted); }
+.presence-dot { width:7px; height:7px; display:inline-block; flex-shrink:0; border-radius:50%; background:#b1bac4; }
+.is-online .presence-dot { background:#2f9867; }
+.member-presence { display:flex; align-items:center; gap:6px; margin-top:4px; font-size:11px; color:var(--muted); font-weight:400; flex-wrap:wrap; }
+.member-presence span:last-child { overflow-wrap:anywhere; }

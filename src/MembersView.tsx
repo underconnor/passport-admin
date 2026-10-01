@@ -342,7 +342,7 @@ export function MembersView({ csrfToken, servers, onError }: {
         <button className="member-summary" aria-expanded={expanded === member.id} aria-controls={`member-detail-${member.id}`} onClick={() => { setExpanded(expanded === member.id ? null : member.id); setEditing(null); setStatsMember(null); }}>
           <span className="member-summary-name"><strong>{member.displayName}</strong><small>{member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</small></span>
           <span className={`member-kind ${currentMembership(member).tone}`}>{currentMembership(member).label}</span>
-          <span className="member-summary-minecraft">{member.minecraft?.name ?? "연결 없음"}</span>
+          <span className="member-summary-minecraft">{member.minecraft?.name ?? "연결 없음"}{member.presence ? <span className={`member-presence ${member.presence.online ? "is-online" : ""}`}><span className="presence-dot" /><span>{member.presence.online ? `접속 중${member.presence.serverLabel ? ` · ${member.presence.serverLabel}` : ""}` : "오프라인"}</span></span> : null}</span>
           <span className="member-summary-discord">{member.discordConnection?.displayName || member.discordConnection?.username || (member.discordId ? member.discordId : "연결 없음")}</span>
           <span className="row-chevron" aria-hidden="true">{expanded === member.id ? "−" : "+"}</span>
         </button>
@@ -351,6 +351,7 @@ export function MembersView({ csrfToken, servers, onError }: {
             {member.admissionYear ? <div><dt>입학 학번</dt><dd>{member.admissionYear}학번</dd></div> : null}
             <div><dt>Minecraft</dt><dd>{member.minecraft?.name ?? "연결 없음"}</dd></div>
             <div><dt>Discord</dt><dd>{member.discordConnection ? <>{member.discordConnection.username}<small>{member.discordConnection.discordId} · {discordRoleLabels[member.discordConnection.roleStatus]}</small></> : member.discordId ?? "연결 없음"}</dd></div>
+            {member.presence ? <div><dt>현재 접속</dt><dd>{member.presence.online ? member.presence.serverLabel || "접속 중" : "오프라인"}<small>마지막 확인 {dateTime(member.presence.lastSeenAt)}</small></dd></div> : null}
             <div><dt>명부 확인 유효 시점</dt><dd>{dateTime(member.verifiedUntil)}</dd></div>
             <div><dt>접근 범위</dt><dd>{member.scopeRestricted ? member.scopeLimit.length ? member.scopeLimit.map(id => servers.find(server => server.id === id)?.label ?? id).join(", ") : "모든 서버 제한" : "서버 정책 적용"}</dd></div>
           </dl>
