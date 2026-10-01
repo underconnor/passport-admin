@@ -4,6 +4,20 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  target_university_login_required: "대상자의 학교 인증이 만료되었습니다. 먼저 학교 재인증을 요청해 주세요.",
+  operator_already_enrolled: "이미 등록된 운영자입니다. 운영자 목록을 확인해 주세요.",
+  invitation_pending: "이 계정에 수락 대기 중인 초대가 있습니다. 초대 내역을 확인해 주세요.",
+  operator_not_found: "운영자를 찾지 못했습니다. 목록을 새로고침해 주세요.",
+  mfa_enrollment_unavailable: "현재 환경에서는 초대 수락을 사용할 수 없습니다. 서버 운영자에게 문의해 주세요.",
+  admin_write_required: "조회 전용 권한입니다. 변경 권한이 있는 운영자에게 요청해 주세요.",
+  owner_required: "총괄 운영자만 사용할 수 있는 기능입니다.",
+  self_admin_change_forbidden: "본인의 운영자 권한은 변경하거나 회수할 수 없습니다. 다른 총괄 운영자에게 요청해 주세요.",
+  last_owner: "마지막 총괄 운영자의 권한은 회수할 수 없습니다. 먼저 다른 총괄 운영자를 등록해 주세요.",
+  invitation_unavailable: "이미 처리되었거나 사용할 수 없는 초대입니다. 최신 목록을 확인해 주세요.",
+  invitation_not_found: "이 계정에 해당하는 초대를 찾을 수 없습니다.",
+  invitation_expired: "초대가 만료되었습니다. 총괄 운영자에게 새 초대를 요청해 주세요.",
+  administrator_exists: "이미 등록된 운영자입니다. 운영자 목록을 확인해 주세요.",
+  invalid_admin_role: "운영자 역할을 확인해 주세요.",
   subject_changed: "다른 곳에서 회원 정보가 변경되었습니다. 창을 닫고 목록을 새로고침한 뒤 다시 확인해 주세요.",
   cannot_delete_self: "현재 로그인한 관리자 계정은 삭제할 수 없습니다. 다른 관리자에게 요청해 주세요.",
   last_administrator: "마지막 관리자 계정은 삭제할 수 없습니다. 먼저 다른 관리자를 등록해 주세요.",

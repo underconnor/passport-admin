@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { api, errorMessage } from "./api";
 import type { AuthSession } from "./api";
 import type { AdminSession } from "./types";
+import { PendingInvitations } from "./PendingInvitations";
 import { Icon } from "./ui";
 
 export function AccessGate({
@@ -130,7 +131,7 @@ export function AccessGate({
             {admin.displayName}님,{" "}
             {admin.enrolled && admin.mfaRequired && !admin.enrollmentPending
               ? "인증 앱의 6자리 코드를 입력해 주세요. 확인 후 15분 동안 관리 기능을 사용할 수 있습니다."
-              : "최초 운영자 등록에는 서버 운영자가 전달한 등록 코드가 필요합니다."}
+              : admin.bootstrapAvailable ? "최초 운영자 등록에는 서버 운영자가 전달한 등록 코드가 필요합니다." : "이 학교 계정에 발급된 운영자 초대를 확인해 주세요."}
           </p>
           {showEnrollmentForm ? (
             <form onSubmit={enroll}>
@@ -235,13 +236,7 @@ export function AccessGate({
             </form>
           ) : null}
           {!admin.enrolled && !pending && !admin.bootstrapAvailable ? (
-            <div className="empty-state gate-empty">
-              <h3>이 계정에는 운영자 권한이 없습니다.</h3>
-              <p>
-                기존 운영자에게 계정 권한을 확인해 주세요. 일반 회원
-                로그인만으로 관리 권한이 부여되지 않습니다.
-              </p>
-            </div>
+            <PendingInvitations csrfToken={auth.csrfToken} refresh={refresh} onError={onError} />
           ) : null}
         </>
       )}

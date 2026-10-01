@@ -1622,3 +1622,30 @@ button.member-summary:hover, button.member-summary[aria-expanded=true] { backgro
 .is-online .presence-dot { background:#2f9867; }
 .member-presence { display:flex; align-items:center; gap:6px; margin-top:4px; font-size:11px; color:var(--muted); font-weight:400; flex-wrap:wrap; }
 .member-presence span:last-child { overflow-wrap:anywhere; }
+
+.operator-search { margin-top: 16px; }
+.operator-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 18px 0; }
+.operator-row + .operator-row { border-top: 1px solid var(--border); }
+.operator-identity { flex: 1; min-width: 180px; }
+.operator-identity strong { display: flex; align-items: center; gap: 8px; font-size: 14px; word-break: keep-all; overflow-wrap: anywhere; }
+.operator-identity small { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; }
+.operator-self { color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; font-size: 10px; font-weight: 400; }
+.operator-actions { display: flex; gap: 8px; }
+.operator-protection { flex-basis: 100%; color: var(--muted); font-size: 11px; }
+.operator-target { display: flex; flex-direction: column; gap: 6px; padding: 16px; margin: 16px 0; background: var(--background); border-radius: 8px; }
+.operator-target span { font-size: 12px; color: var(--muted); }
+.operator-impact { margin: 18px 0; word-break: keep-all; }
+.pending-invitations { padding-top: 12px; }
+.pending-invitation { border: 1px solid var(--border); padding: 20px; border-radius: 8px; margin-top: 14px; }
+.pending-invitation h3 { font-size: 16px; margin-bottom: 10px; }
+.pending-invitation p { font-size: 13px; line-height: 1.7; word-break: keep-all; }
+.pending-invitation button { margin-top: 16px; }
+@media (max-width: 600px) {
+  .operator-identity { min-width: 0; flex-basis: 100%; }
+  .operator-actions { margin-left: auto; }
+  .operators-view .section-toolbar { align-items: flex-start; }
+  .operators-view .section-toolbar > button { flex-shrink: 0; }
+  .pending-invitations .panel-head { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
+}
+
+.operators-view p, .operators-view .helper, .pending-invitations p { word-break: keep-all; overflow-wrap: anywhere; }

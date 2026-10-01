@@ -277,8 +277,8 @@ function DeleteMemberDialog({ member, csrfToken, onClose, onSaved, onError }: {
   </Dialog>;
 }
 
-export function MembersView({ csrfToken, servers, onError }: {
-  csrfToken: string; servers: ServerDefinition[]; onError: ReportError;
+export function MembersView({ csrfToken, servers, onError, canWrite, manageOperators }: {
+  csrfToken: string; servers: ServerDefinition[]; onError: ReportError; canWrite: boolean; manageOperators: boolean;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [queryInput, setQueryInput] = useState("");
@@ -355,12 +355,12 @@ export function MembersView({ csrfToken, servers, onError }: {
             <div><dt>명부 확인 유효 시점</dt><dd>{dateTime(member.verifiedUntil)}</dd></div>
             <div><dt>접근 범위</dt><dd>{member.scopeRestricted ? member.scopeLimit.length ? member.scopeLimit.map(id => servers.find(server => server.id === id)?.label ?? id).join(", ") : "모든 서버 제한" : "서버 정책 적용"}</dd></div>
           </dl>
-          {editing === member.id ? <MemberEditor member={member} servers={servers} csrfToken={csrfToken} onClose={() => setEditing(null)} onSaved={saved} onError={onError} /> : <div className="member-actions">
-            <button onClick={() => setEditing(member.id)}>접근 제한 수정</button>
+          {canWrite && (!member.administrator || manageOperators) && editing === member.id ? <MemberEditor member={member} servers={servers} csrfToken={csrfToken} onClose={() => setEditing(null)} onSaved={saved} onError={onError} /> : <div className="member-actions">
+            {canWrite && (!member.administrator || manageOperators) ? <button onClick={() => setEditing(member.id)}>접근 제한 수정</button> : null}
             <button onClick={() => setStatsMember(statsMember === member.id ? null : member.id)} aria-expanded={statsMember === member.id}>플레이 기록</button>
-            <button className="text-button" disabled={!member.minecraft} onClick={() => setSelection({ member, action: "unlink" })}>Minecraft 연결 해제</button>
+            {canWrite && (!member.administrator || manageOperators) ? <><button className="text-button" disabled={!member.minecraft} onClick={() => setSelection({ member, action: "unlink" })}>Minecraft 연결 해제</button>
             <button className="text-button" disabled={!member.discordConnection && !member.discordId} onClick={() => setSelection({ member, action: "unlink-discord" })}>Discord 연결 해제</button>
-            <button className="text-button danger member-delete" onClick={() => setSelection({ member, action: "delete" })}>회원 정보 삭제</button>
+            <button className="text-button danger member-delete" onClick={() => setSelection({ member, action: "delete" })}>회원 정보 삭제</button></> : null}
           </div>}
           {statsMember === member.id ? <div className="member-stats"><StatsView endpoint={`/admin/members/${encodeURIComponent(member.id)}/stats`} title={`${member.displayName}님의 플레이 기록`} onError={onError} /></div> : null}
         </div> : null}
@@ -368,7 +368,7 @@ export function MembersView({ csrfToken, servers, onError }: {
       {!members.length ? <div className="empty-state"><h3>{loading ? "회원 목록을 불러오고 있어요" : error ? "목록을 다시 불러와 주세요" : query || membership !== "all" ? "조건에 맞는 사용자가 없습니다" : "등록된 사용자가 없습니다"}</h3><p>{loading ? "잠시만 기다려 주세요." : error ? "목록 새로고침으로 다시 시도할 수 있습니다." : "학교 인증을 완료한 사용자가 이곳에 표시됩니다."}</p></div> : null}
     </section>
     <div className="pagination member-pagination"><button disabled={loading || !pages.length} onClick={() => setPages(current => current.slice(0, -1))}>이전</button><span>{pages.length + 1} 페이지</span><button disabled={loading || !nextCursor} onClick={() => { if (nextCursor) setPages(current => [...current, nextCursor]); }}>다음</button></div>
-    {selection?.action === "delete" ? <DeleteMemberDialog member={selection.member} csrfToken={csrfToken} onClose={() => setSelection(null)} onSaved={saved} onError={onError} />
-      : selection ? <UnlinkDialog member={selection.member} provider={selection.action === "unlink" ? "minecraft" : "discord"} csrfToken={csrfToken} onClose={() => setSelection(null)} onSaved={saved} onError={onError} /> : null}
+    {canWrite && selection?.action === "delete" ? <DeleteMemberDialog member={selection.member} csrfToken={csrfToken} onClose={() => setSelection(null)} onSaved={saved} onError={onError} />
+      : canWrite && selection ? <UnlinkDialog member={selection.member} provider={selection.action === "unlink" ? "minecraft" : "discord"} csrfToken={csrfToken} onClose={() => setSelection(null)} onSaved={saved} onError={onError} /> : null}
   </>;
 }

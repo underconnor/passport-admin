@@ -87,8 +87,8 @@ function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
   </Dialog>;
 }
 
-export function ServersView({ csrfToken, onError, onChanged }: {
-  csrfToken: string; onError: ReportError; onChanged: () => Promise<void>;
+export function ServersView({ csrfToken, onError, onChanged, canWrite }: {
+  csrfToken: string; onError: ReportError; onChanged: () => Promise<void>; canWrite: boolean;
 }) {
   const [servers, setServers] = useState<ManagedServer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,13 +139,13 @@ export function ServersView({ csrfToken, onError, onChanged }: {
             <div><dt>플러그인 최근 응답</dt><dd>{dateTime(server.paperSeenAt)}</dd></div>
             <div><dt>서버 구분</dt><dd>{server.sensitive ? "민감 서버" : "일반 서버"}</dd></div>
           </dl>
-          <div className="member-actions"><button onClick={() => setSelection(server)}>접근 및 설정</button></div>
+          {canWrite ? <div className="member-actions"><button onClick={() => setSelection(server)}>접근 및 설정</button></div> : null}
         </div> : null}
       </article>)}
     </section>
     {!loading && !servers.length ? <section className="panel empty-state"><h2>아직 등록된 서버가 없습니다</h2><p>플러그인의 API 주소와 서비스 인증을 설정하면 여기에 표시됩니다.</p></section> : null}
     <p className="helper field-help">응답 상태는 최근 90초 이내 Paper 플러그인의 보고를 기준으로 합니다. 실제 게임 접속 가능 여부와는 다를 수 있습니다.</p>
-    {selection ? <ServerEditor key={selection.id} server={selection} csrfToken={csrfToken} onClose={() => setSelection(null)} onError={onError} onSaved={async () => {
+    {canWrite && selection ? <ServerEditor key={selection.id} server={selection} csrfToken={csrfToken} onClose={() => setSelection(null)} onError={onError} onSaved={async () => {
       setSelection(null); setNotice("서버 설정을 저장했습니다. 접속 중인 사용자의 권한도 갱신합니다."); await load(); await onChanged();
     }} /> : null}
   </>;

@@ -17,7 +17,7 @@ const server = http.createServer(async (req, res) => {
   const json = (code, data) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(data)); };
   const body = async () => { let input = ''; for await (const part of req) input += part; return JSON.parse(input); };
   if (url.pathname === '/v1/auth/session') return json(200, { authenticated: true, authMode: 'university', csrfToken: 'synthetic-admin-csrf' });
-  if (url.pathname === '/v1/admin/session') return json(200, { authenticated: true, schoolVerified: true, displayName: '합성 운영자', enrolled: true, enrollmentPending: false, bootstrapAvailable: false, mfaRequired: false, authorized: state.authorized, mfaVerified: false, mfaVerifiedUntil: null });
+  if (url.pathname === '/v1/admin/session') return json(200, { authenticated: true, schoolVerified: true, subjectId: "fixture-owner", role: "owner", permissions: { read: true, write: true, manageOperators: true }, displayName: '합성 운영자', enrolled: true, enrollmentPending: false, bootstrapAvailable: false, mfaRequired: false, authorized: state.authorized, mfaVerified: false, mfaVerifiedUntil: null });
   if (url.pathname === '/v1/admin/overview') return json(200, { subjects: 3, linked: 2, suspended: 0, snapshot: null, sync: { enabled: false, running: false, lastSuccessAt: null, lastError: null }, servers: [] });
   if (url.pathname === '/v1/admin/discord') {
     if (!state.authorized) return json(403, { code: 'admin_required' });

@@ -4,7 +4,7 @@ import { settingsDraft, validateDiscordDraft } from "./discord";
 import type { DiscordDraft, DiscordOverview, DiscordSettings } from "./discord";
 import type { ReportError } from "./types";
 
-export function DiscordBotView({ csrfToken, onError }: { csrfToken: string; onError: ReportError }) {
+export function DiscordBotView({ csrfToken, onError, canWrite }: { csrfToken: string; onError: ReportError; canWrite: boolean }) {
   const [data, setData] = useState<DiscordOverview | null>(null);
   const [settings, setSettings] = useState<DiscordSettings | null>(null);
   const [draft, setDraft] = useState<DiscordDraft | null>(null);
@@ -41,7 +41,7 @@ export function DiscordBotView({ csrfToken, onError }: { csrfToken: string; onEr
   const validation = draft && settings ? validateDiscordDraft(draft, settings) : "";
   const changed = conflict || Boolean(settings && data?.settings && settings.revision !== data.settings.revision);
   async function perform(action: "save" | "reconcile") {
-    if (!settings || !draft || validation || changed) return;
+    if (!canWrite || !settings || !draft || validation || changed) return;
     setBusy(action); setError(""); setNotice(""); setLoading(false); ++sequence.current;
     try {
       if (action === "save") {
@@ -58,7 +58,7 @@ export function DiscordBotView({ csrfToken, onError }: { csrfToken: string; onEr
   }
   const disabled = Boolean(busy);
   return <div className="discord-admin">
-    <div className="section-toolbar"><p className="helper">설정 변경은 저장 후 반영됩니다.</p><button disabled={loading || disabled} onClick={() => void load(false)}>상태 새로고침</button></div>
+    <div className="section-toolbar"><p className="helper">{canWrite ? "설정 변경은 저장 후 반영됩니다." : "조회 전용으로 설정을 확인하고 있습니다."}</p><button disabled={loading || disabled} onClick={() => void load(false)}>상태 새로고침</button></div>
     {notice ? <div className="notice notice-success" role="status">{notice}</div> : null}
     {error ? <div className="notice notice-error" role="alert">{error}</div> : null}
     {!data ? <section className="panel empty-state"><h2>{loading ? "봇 설정을 불러오고 있습니다" : "봇 설정을 확인하지 못했습니다"}</h2><p>상태 새로고침으로 다시 확인해 주세요.</p></section> : <>
@@ -72,14 +72,14 @@ export function DiscordBotView({ csrfToken, onError }: { csrfToken: string; onEr
           <div><span>닉네임 실패</span><strong className={data.status.nicknames.failed ? "warning" : ""}>{data.status.nicknames.failed}</strong></div>
         </div>
         <p className="helper">실패가 계속되면 Discord의 봇 역할 위치와 역할·닉네임 관리 권한을 확인해 주세요. 서버 소유자 또는 봇과 같거나 높은 역할의 계정은 봇이 닉네임을 변경할 수 없습니다.</p>
-        <div className="discord-reconcile"><p className="helper">설정 저장 후 전체 연결 계정의 역할과 닉네임을 다시 확인할 수 있습니다.</p><button disabled={disabled || loading || dirty || changed || !data.configured || !settings} onClick={() => void perform("reconcile")}>{busy === "reconcile" ? "요청 중…" : "전체 계정 재동기화"}</button></div>
+        {canWrite ? <div className="discord-reconcile"><p className="helper">설정 저장 후 전체 연결 계정의 역할과 닉네임을 다시 확인할 수 있습니다.</p><button disabled={disabled || loading || dirty || changed || !data.configured || !settings} onClick={() => void perform("reconcile")}>{busy === "reconcile" ? "요청 중…" : "전체 계정 재동기화"}</button></div> : null}
       </section>
       {!settings || !draft ? <section className="panel empty-state"><h2>운영 환경의 봇 설정이 필요합니다</h2><p>운영 서버에 Discord 서버와 학교 인증 역할을 구성한 뒤 다시 확인해 주세요. 봇 토큰은 이 화면에서 입력하지 않습니다.</p></section> : <section className="panel discord-settings" aria-labelledby="discord-settings-heading">
         <div className="panel-head"><h2 id="discord-settings-heading">역할과 닉네임 설정</h2><small>{dirty ? "저장하지 않은 변경" : "저장된 설정"}</small></div>
         <dl className="detail-list"><div><dt>Discord 서버 ID</dt><dd>{settings.guildId}</dd></div><div><dt>학교 인증 역할 ID</dt><dd>{settings.verificationRoleId}</dd></div></dl>
         <p className="helper">서버와 학교 인증 역할은 운영 환경에서 관리합니다. 학교 인증 사용자는 소모임 회원이 아니어도 연결할 수 있습니다.</p>
         {changed ? <div className="notice notice-error" role="alert"><p>다른 운영자가 설정을 변경했습니다. 최신 설정을 확인한 뒤 다시 수정해 주세요.</p><button className="text-button" disabled={disabled} onClick={() => void load(true)}>입력 취소하고 최신 설정 불러오기</button></div> : null}
-        <fieldset disabled={disabled} className="discord-fields">
+        <fieldset disabled={disabled || !canWrite} className="discord-fields">
           <label className="field-label" htmlFor="discord-member-role">현재 Overworld 회원 역할 ID</label><input id="discord-member-role" inputMode="numeric" value={draft.memberRoleId ?? ""} onChange={event => update({ memberRoleId: event.target.value.trim() || null })} maxLength={20} />
           <p className="helper field-help">활성 회원에게만 지급합니다. 비우면 현재 회원 역할을 사용하지 않습니다.</p>
           <label className="field-label" htmlFor="discord-semester">현재 학기</label><input id="discord-semester" placeholder="26-2" value={draft.currentSemester ?? ""} onChange={event => update({ currentSemester: event.target.value.trim() || null })} maxLength={4} />
@@ -95,7 +95,7 @@ export function DiscordBotView({ csrfToken, onError }: { csrfToken: string; onEr
           <label className="check-row"><input type="checkbox" checked={draft.nicknameEnabled} onChange={event => update({ nicknameEnabled: event.target.checked })} /><span><strong>서버 닉네임 동기화</strong><small>Minecraft 연결 시 실명 / 게임 이름, 미연결 시 실명으로 반영합니다. 사용자의 추가 동의가 필요합니다.</small></span></label>
         </fieldset>
         {validation ? <p className="helper warning" role="alert">{validation}</p> : null}
-        <div className="discord-save"><button className="primary" disabled={disabled || loading || !dirty || Boolean(validation) || changed || !data.configured} onClick={() => void perform("save")}>{busy === "save" ? "저장 중…" : "봇 설정 저장"}</button></div>
+        {canWrite ? <div className="discord-save"><button className="primary" disabled={disabled || loading || !dirty || Boolean(validation) || changed || !data.configured} onClick={() => void perform("save")}>{busy === "save" ? "저장 중…" : "봇 설정 저장"}</button></div> : null}
       </section>}
     </>}
   </div>;

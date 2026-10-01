@@ -15,7 +15,11 @@ export interface ManagedServer extends ServerDefinition {
   createdAt: string;
   updatedAt: string;
 }
+export type AdminRole = "owner" | "operator" | "viewer";
 export interface AdminSession {
+  subjectId: string | null;
+  role: AdminRole | null;
+  permissions: { read: boolean; write: boolean; manageOperators: boolean };
   authenticated: boolean;
   schoolVerified: boolean;
   displayName: string | null;

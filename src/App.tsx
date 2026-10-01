@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, callbackError, errorMessage } from "./api";
 import type { AuthSession } from "./api";
 import { AppShell } from "./ui";
@@ -9,11 +9,13 @@ import { RosterView } from "./RosterView";
 import { ServersView } from "./ServersView";
 import { DiscordBotView } from "./DiscordBotView";
 import { StatsView } from "./StatsView";
+import { OperatorsView } from "./OperatorsView";
+import { roleLabel } from "./operators";
 import { AuditView } from "./AuditView";
 import { dateTime } from "./types";
 import type { AdminSession, Overview } from "./types";
 
-type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats";
+type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats" | "operators";
 const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "overview", label: "운영 현황", icon: "dashboard" },
   { id: "members", label: "회원 관리", icon: "check" },
@@ -21,6 +23,7 @@ const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "roster", label: "명부 동기화", icon: "book" },
   { id: "discord", label: "Discord 봇", icon: "settings" },
   { id: "stats", label: "플레이 통계", icon: "dashboard" },
+  { id: "operators", label: "운영자 관리", icon: "check" },
   { id: "audit", label: "운영 기록", icon: "settings" },
 ];
 const callbackParams = new URLSearchParams(window.location.search);
@@ -47,31 +50,35 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  const refreshSession = useCallback(async (signal?: AbortSignal) => {
-    setLoading(true);
+  const sessionSequence = useRef(0);
+  const refreshSession = useCallback(async (signal?: AbortSignal, background = false) => {
+    const sequence = ++sessionSequence.current;
+    const obsolete = () => signal?.aborted || sequence !== sessionSequence.current;
+    if (!background) setLoading(true);
     try {
       const session = await api<AuthSession>("/auth/session", { signal });
-      if (signal?.aborted) return;
+      if (obsolete()) return;
       setAuth(session);
       const access = await api<AdminSession>("/admin/session", { signal });
-      if (signal?.aborted) return;
+      if (obsolete()) return;
       setAdmin(access);
       setNow(Date.now());
       if (access.authorized) {
+        if (!access.permissions?.manageOperators) setView(current => current === "operators" ? "overview" : current);
         const data = await api<Overview>("/admin/overview", { signal });
-        if (!signal?.aborted) setOverview(data);
+        if (!obsolete()) setOverview(data);
       } else {
         setOverview(null);
         setView("overview");
       }
     } catch (failure) {
-      if (!signal?.aborted) {
+      if (!obsolete()) {
         setOverview(null);
         setAdmin(null);
         setError(errorMessage(failure));
       }
     } finally {
-      if (!signal?.aborted) setLoading(false);
+      if (!obsolete()) setLoading(false);
     }
   }, []);
 
@@ -81,9 +88,20 @@ export function App() {
     return () => controller.abort();
   }, [refreshSession]);
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
+    const controller = new AbortController();
+    let running = false;
+    const refresh = async () => {
+      if (running || document.visibilityState !== "visible") return;
+      running = true;
+      setNow(Date.now());
+      await refreshSession(controller.signal, true);
+      running = false;
+    };
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { controller.abort(); window.clearInterval(timer); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [refreshSession]);
   useEffect(() => {
     if (!admin?.mfaRequired || !admin.mfaVerified || !admin.mfaVerifiedUntil) return;
     const expiresAt = new Date(admin.mfaVerifiedUntil).getTime();
@@ -117,6 +135,8 @@ export function App() {
       if (
         failure.status === 401 ||
         [
+          "admin_write_required",
+          "owner_required",
           "mfa_required",
           "admin_required",
           "university_login_required",
@@ -163,7 +183,10 @@ export function App() {
     (!admin.mfaRequired || (admin.mfaVerified && admin.mfaVerifiedUntil &&
       new Date(admin.mfaVerifiedUntil).getTime() > now)),
   );
-  const activeNavigation = verified ? navigation : navigation.slice(0, 1);
+  const canWrite = verified && admin?.permissions?.write === true;
+  const manageOperators = verified && admin?.permissions?.manageOperators === true;
+  const accessKey = `${admin?.subjectId}:${admin?.role}:${canWrite}:${manageOperators}`;
+  const activeNavigation = verified ? navigation.filter(item => item.id !== "operators" || manageOperators) : navigation.slice(0, 1);
   const selected = navigation.find((item) => item.id === view)!;
   return (
     <AppShell
@@ -175,7 +198,7 @@ export function App() {
         setError("");
       }}
       displayName={admin?.displayName ?? "운영자"}
-      description={verified ? "등록된 운영자" : "권한 확인 필요"}
+      description={verified && admin?.role ? roleLabel(admin.role) : "권한 확인 필요"}
       development={auth?.authMode === "development"}
       university={auth?.authMode === "university"}
       onLogout={admin?.authenticated ? () => void logout() : undefined}
@@ -194,6 +217,7 @@ export function App() {
                     ? "연결된 서버와 서버별 접속 대상을 관리합니다."
                   : view === "discord"
                     ? "학교·회원·학기 역할과 서버 닉네임 동기화를 관리합니다."
+                  : view === "operators" ? "운영자를 초대하고 역할과 접근 권한을 관리합니다."
                   : view === "stats" ? "전체 사용자와 서버별 플레이 기록을 확인합니다."
                   : view === "roster"
                     ? "새 명부를 확인한 뒤 회원 정책에 반영합니다."
@@ -201,7 +225,7 @@ export function App() {
               : "학교 계정으로 로그인해 등록된 운영자 권한을 확인합니다."}
           </p>
         </div>
-        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members")) ? <button
+        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members" || view === "operators")) ? <button
           disabled={loading || busy}
           onClick={() => {
             setError("");
@@ -216,6 +240,7 @@ export function App() {
           추가 인증 유효 시점: {dateTime(admin?.mfaVerifiedUntil ?? null)}
         </div>
       ) : null}
+      {verified && !canWrite ? <div className="notice" role="status">조회 전용 권한입니다. 회원·서버·운영 기록을 확인할 수 있습니다.</div> : null}
       {error ? (
         <div role="alert" className="notice notice-error">
           {error}
@@ -233,7 +258,7 @@ export function App() {
         </section>
       ) : !verified ? (
         <AccessGate
-          key={admin.displayName ?? "guest"}
+          key={`${admin.subjectId}:${admin.enrolled}`}
           auth={auth}
           admin={admin}
           refresh={async () => {
@@ -248,18 +273,20 @@ export function App() {
           <h2>운영 정보를 불러오지 못했습니다.</h2>
           <p>상태 새로고침으로 다시 시도해 주세요.</p>
         </section>
+      ) : view === "operators" && manageOperators ? (
+        <OperatorsView key={accessKey} csrfToken={auth.csrfToken} subjectId={admin.subjectId} now={now} onError={authorizationFailure} />
       ) : view === "members" ? (
-        <MembersView
+        <MembersView key={accessKey} canWrite={canWrite} manageOperators={manageOperators}
           csrfToken={auth.csrfToken}
           servers={overview.servers}
           onError={authorizationFailure}
         />
       ) : view === "servers" ? (
-        <ServersView csrfToken={auth.csrfToken} onError={authorizationFailure} onChanged={refreshOverview} />
+        <ServersView key={accessKey} canWrite={canWrite} csrfToken={auth.csrfToken} onError={authorizationFailure} onChanged={refreshOverview} />
       ) : view === "discord" ? (
-        <DiscordBotView csrfToken={auth.csrfToken} onError={authorizationFailure} />
+        <DiscordBotView key={accessKey} canWrite={canWrite} csrfToken={auth.csrfToken} onError={authorizationFailure} />
       ) : view === "roster" ? (
-        <RosterView
+        <RosterView key={accessKey} canWrite={canWrite}
           overview={overview}
           csrfToken={auth.csrfToken}
           now={now}

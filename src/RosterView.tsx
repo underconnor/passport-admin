@@ -5,12 +5,14 @@ import type { Overview, ReportError, RosterPreview, SyncResult } from "./types";
 
 export function RosterView({
   overview,
+  canWrite,
   csrfToken,
   now,
   refresh,
   onError,
 }: {
   overview: Overview;
+  canWrite: boolean;
   csrfToken: string;
   now: number;
   refresh: () => Promise<void>;
@@ -22,6 +24,7 @@ export function RosterView({
   const [error, setError] = useState("");
   const [result, setResult] = useState<SyncResult | null>(null);
   async function inspect() {
+    if (!canWrite) return;
     setBusy("preview");
     setError("");
     setPreview(null);
@@ -44,7 +47,7 @@ export function RosterView({
   }
   async function apply() {
     if (
-      !preview ||
+      !canWrite || !preview ||
       (preview.risks.length && !confirmed) ||
       new Date(preview.expiresAt).getTime() <= Date.now()
     )
@@ -126,7 +129,7 @@ export function RosterView({
           구글시트는 읽기만 수행합니다. 먼저 현재 명부를 확인한 뒤 해당 결과를
           반영합니다.
         </p>
-        <div className="form-actions">
+        {canWrite ? <div className="form-actions">
           <button
             className="primary"
             disabled={Boolean(busy) || overview.sync.running}
@@ -134,7 +137,7 @@ export function RosterView({
           >
             {busy === "preview" ? "명부 확인 중…" : "새 명부 미리보기"}
           </button>
-        </div>
+        </div> : null}
       </section>
       {error ? (
         <div role="alert" className="notice notice-error">
@@ -152,7 +155,7 @@ export function RosterView({
           </div>
         </div>
       ) : null}
-      {preview ? (
+      {canWrite && preview ? (
         <section className="panel">
           <div className="panel-head">
             <h2>반영 전 확인</h2>
