@@ -83,7 +83,7 @@ function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
       <input type="checkbox" checked={statisticsEnabled} onChange={event => setStatisticsEnabled(event.target.checked)} disabled={busy} />
       <span><strong>이 서버 통계 수집</strong><small>끄면 새 기록 수집과 전체 합계 표시를 중지합니다. 기존 기록은 보관합니다. 사용자도 본인 수집을 켠 경우에만 기록됩니다.</small></span>
     </label> : null}
-    {statisticsEnabled !== server.statisticsEnabled ? <p className="helper warning">변경 시 다른 서버에서 아직 전송하지 않은 짧은 구간의 기록도 일부 누락될 수 있습니다.</p> : null}
+    {statisticsEnabled !== server.statisticsEnabled ? <p className="helper warning">변경 시 다른 서버에서 전송 대기 중인 기록도 제외될 수 있습니다. 이미 저장된 기록은 유지됩니다.</p> : null}
     <label className="check-row">
       <input type="checkbox" checked={sensitive} onChange={e => setSensitive(e.target.checked)} disabled={busy} />
       <span><strong>민감 서버로 표시</strong><small>접근 관리에서 별도로 구분합니다. 서버 이동 시에는 항상 최신 권한을 확인합니다.</small></span>

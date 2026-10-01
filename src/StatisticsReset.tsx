@@ -39,7 +39,7 @@ export function StatisticsReset({ scope, targetLabel, csrfToken, onClose, onSave
   return <Dialog title="플레이 통계 초기화" busy={busy} onClose={onClose}>
     <div className="stats-reset-target"><span>초기화 범위</span><strong>{targetLabel}</strong><small>{scope.scope === "subject" ? "이 회원의 모든 서버 기록" : scope.scope === "server" ? "이 서버의 모든 회원 기록" : "모든 회원의 모든 서버 기록"}</small></div>
     <p className="helper">수집이 꺼진 서버의 보관 기록도 범위에 포함됩니다. 실행 시점까지 쌓인 기록을 초기화하며 화면에서 되돌릴 수 없습니다.</p>
-    <p className="helper warning stats-reset-warning">다른 서버에서 아직 전송하지 않은 짧은 구간의 기록도 일부 누락될 수 있습니다.</p>
+    <p className="helper warning stats-reset-warning">다른 서버에서 전송 대기 중인 기록도 제외될 수 있습니다. 이미 저장된 다른 서버 기록은 유지됩니다.</p>
     {loading ? <p className="helper" role="status">초기화 영향을 확인하고 있습니다.</p> : preview ? <>
       <dl className="stats-reset-summary"><div><dt>영향받는 회원</dt><dd>{number(preview.affectedSubjects)}명</dd></div><div><dt>저장된 서버별 기록</dt><dd>{number(preview.rows)}건</dd></div><div><dt>현재 누적 시간</dt><dd>{playTime(preview.totals.playSeconds)}</dd></div></dl>
       {preview.rows <= 0 ? <p className="helper">초기화할 저장 기록이 없습니다.</p> : <>
