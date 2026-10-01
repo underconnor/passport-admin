@@ -74,7 +74,7 @@ function MemberEditor({
       onClose={onClose}
     >
       <p className="helper">
-        서버별 접근 정책으로 허용된 범위 안에서 이 회원의 접속을 제한합니다.
+        서버별 접근 정책으로 허용된 범위 안에서 이 사용자의 접속을 제한합니다.
         서버 전체의 허용 대상은 서버 관리에서 변경할 수 있습니다.
       </p>
       <label className="check-row">
@@ -85,7 +85,7 @@ function MemberEditor({
           disabled={busy}
         />
         <span>
-          <strong>회원 접근 정지</strong>
+          <strong>사용자 접근 정지</strong>
           <small>게임 접근을 제한하고 Discord 인증 역할을 회수합니다.</small>
         </span>
       </label>
@@ -300,7 +300,7 @@ export function MembersView({
     <>
       <div className="section-toolbar">
         <p className="helper">
-          학교 인증을 완료한 회원 {members.length}명 조회됨
+          학교 인증을 완료한 사용자 {members.length}명 조회됨
           {cursor ? " · 다음 목록 있음" : ""}
         </p>
         <button disabled={loading} onClick={() => void load()}>

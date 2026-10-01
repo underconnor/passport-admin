@@ -4,7 +4,7 @@ import { Dialog } from "./Dialog";
 import { dateTime } from "./types";
 import type { ManagedServer, Member, MembersPage, ReportError } from "./types";
 
-const accessLabels = { roster: "명부 권한", members: "활성 회원 전체", selected: "선택한 회원" };
+const accessLabels = { roster: "명부 권한", members: "소모임 회원 전체", selected: "선택한 소모임 회원", university: "학교 인증 사용자 전체" };
 
 function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
   server: ManagedServer; csrfToken: string; onClose: () => void;
@@ -55,16 +55,18 @@ function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
     <input id="server-label" value={label} onChange={e => setLabel(e.target.value)} maxLength={80} disabled={busy} />
     <label className="check-row">
       <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} disabled={busy} />
-      <span><strong>이 서버 접속 허용</strong><small>끄면 현재 접속 중인 회원에게도 접근 제한이 적용됩니다.</small></span>
+      <span><strong>이 서버 접속 허용</strong><small>끄면 현재 접속 중인 사용자에게도 접근 제한이 적용됩니다.</small></span>
     </label>
-    <label className="field-label" htmlFor="server-access">접속 가능한 회원</label>
+    <label className="field-label" htmlFor="server-access">접속 대상</label>
     <select id="server-access" value={accessMode} onChange={e => setAccessMode(e.target.value as ManagedServer["accessMode"])} disabled={busy}>
       <option value="roster">명부에 이 서버 권한이 있는 회원</option>
-      <option value="members">활성 회원 전체</option>
-      <option value="selected">선택한 활성 회원만</option>
+      <option value="members">소모임 회원 전체</option>
+      <option value="selected">선택한 소모임 회원만</option>
+      <option value="university">학교 인증 사용자 전체 · 비회원 포함</option>
     </select>
-    <p className="helper field-help">학교 인증·명부 유효성·회원별 접근 정지는 모든 방식에 적용됩니다. 회원별 서버 제한도 유지됩니다.</p>
+    <p className="helper field-help">유효한 학교 인증과 개인별 접근 제한은 모든 방식에 적용됩니다. 소모임 회원 대상 서버는 유효한 회원 명부도 확인합니다.</p>
     {accessMode === "members" ? <p className="helper warning">이 서버를 활성화하면 명부에 별도 서버 권한이 없어도 활성 회원이 접속할 수 있습니다.</p> : null}
+    {accessMode === "university" ? <p className="helper warning">학교 인증을 완료한 사용자는 소모임 회원이 아니어도 접속할 수 있습니다. 이용 정지와 개인별 서버 제한은 계속 적용됩니다.</p> : null}
     {accessMode === "selected" ? <fieldset className="server-scope" disabled={busy}>
       <legend>허용할 회원 · {selected.length}명 선택</legend>
       {members.map(member => <label className="check-row" key={member.id}>
@@ -118,7 +120,7 @@ export function ServersView({ csrfToken, onError, onChanged }: {
   return <>
     <div className="section-toolbar"><p className="helper">등록된 서버 {servers.length}개 · 플러그인이 연결되면 자동으로 표시됩니다.</p>
       <button disabled={loading} onClick={() => void load()}>상태 새로고침</button></div>
-    <div className="notice server-discovery-note">새 서버는 접속이 꺼진 상태로 등록됩니다. 서버 설정에서 접속 여부와 허용할 회원을 선택해 주세요.</div>
+    <div className="notice server-discovery-note">새 서버는 접속이 꺼진 상태로 등록됩니다. 서버 설정에서 접속 여부와 접속 대상을 선택해 주세요.</div>
     {notice ? <div role="status" className="notice notice-success">{notice}</div> : null}
     {error ? <div role="alert" className="notice notice-error">{error}</div> : null}
     <div className="managed-server-grid" aria-busy={loading}>
@@ -136,7 +138,7 @@ export function ServersView({ csrfToken, onError, onChanged }: {
     {!loading && !servers.length ? <section className="panel empty-state"><h2>아직 등록된 서버가 없습니다</h2><p>플러그인의 API 주소와 서비스 인증을 설정하면 여기에 표시됩니다.</p></section> : null}
     <p className="helper field-help">응답 상태는 최근 90초 이내 Paper 플러그인의 보고를 기준으로 합니다. 실제 게임 접속 가능 여부와는 다를 수 있습니다.</p>
     {selection ? <ServerEditor key={selection.id} server={selection} csrfToken={csrfToken} onClose={() => setSelection(null)} onError={onError} onSaved={async () => {
-      setSelection(null); setNotice("서버 설정을 저장했습니다. 접속 중인 회원의 권한도 갱신합니다."); await load(); await onChanged();
+      setSelection(null); setNotice("서버 설정을 저장했습니다. 접속 중인 사용자의 권한도 갱신합니다."); await load(); await onChanged();
     }} /> : null}
   </>;
 }

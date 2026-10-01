@@ -6,7 +6,7 @@ export interface ServerDefinition {
 }
 export interface ManagedServer extends ServerDefinition {
   enabled: boolean;
-  accessMode: "roster" | "members" | "selected";
+  accessMode: "roster" | "members" | "selected" | "university";
   allowedSubjectIds: string[];
   paperSeenAt: string | null;
   proxySeenAt: string | null;

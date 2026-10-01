@@ -185,7 +185,7 @@ export function App() {
               ? view === "overview"
                 ? "회원과 서버 접근 정책의 현재 상태를 확인합니다."
                 : view === "members"
-                  ? "명부에서 허용된 범위 안에서 회원의 접근을 관리합니다."
+                  ? "서버별로 허용된 범위 안에서 사용자의 접근을 관리합니다."
                   : view === "servers"
                     ? "연결된 서버와 서버별 접속 대상을 관리합니다."
                   : view === "roster"
@@ -263,14 +263,14 @@ export function App() {
         <>
           <div className="overview-counts">
             <section className="panel metric-card">
-              <span>학교 인증 회원</span>
+              <span>학교 인증 사용자</span>
               <strong>{overview.subjects}</strong>
               <small>등록된 학교 계정</small>
             </section>
             <section className="panel metric-card">
               <span>Minecraft 연결</span>
               <strong>{overview.linked}</strong>
-              <small>회원에 연결된 게임 계정</small>
+              <small>사용자에 연결된 게임 계정</small>
             </section>
             <section className="panel metric-card">
               <span>관리자 접근 정지</span>
@@ -338,7 +338,7 @@ export function App() {
                     <span className="status-label">
                       {server.enabled === false ? "접속 비활성" : server.sensitive
                         ? "접근 시 최신 정책 확인"
-                        : "회원 정책 적용"}
+                        : "서버 정책 적용"}
                     </span>
                   </li>
                 ))}
