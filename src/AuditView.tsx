@@ -15,6 +15,8 @@ const actionLabels: Record<string, string> = {
   "university.login": "학교 로그인",
   "discord_reference.set": "Discord ID 저장",
   "discord_reference.deleted": "Discord ID 삭제",
+  "discord.linked": "Discord 학교 계정 연결",
+  "admin.discord_unlinked": "운영자 Discord 연결 해제",
 };
 export function AuditView({ onError }: { onError: ReportError }) {
   const [events, setEvents] = useState<AuditEvent[]>([]);

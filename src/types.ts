@@ -54,6 +54,14 @@ export interface Member {
   scopeRestricted: boolean;
   scopeLimit: string[];
   discordId: string | null;
+  discordConnection: {
+    discordId: string;
+    username: string;
+    displayName: string;
+    linkedAt: string;
+    roleStatus: "pending" | "granted" | "revoked" | "failed";
+    roleUpdatedAt: string | null;
+  } | null;
   minecraft: { uuid: string; name: string } | null;
 }
 export interface MembersPage {

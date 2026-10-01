@@ -62,3 +62,9 @@
 - loopback 합성 API 브라우저에서 OTP 없는 관리자 진입, 서버 목록/신규 비활성 표시, 선택 회원 저장과 CSRF/revision 전송을 확인했다. 데스크톱 1440px·모바일 390px에서 Pretendard 로딩과 가로 넘침 없음을 확인했다.
 - 독립 소스 검토에서 새 권한 우회나 선택 대상 유실 문제는 발견되지 않았다. `npm run check`, `npm run build`, `git diff --check`를 통과했다.
 - 합성 브라우저 저장 성공은 운영 회원 변경이나 실제 게임 권한 회수 검증을 대신하지 않는다. 운영 배포 기록은 비공개 ops에서 관리한다.
+
+## 2026-10-01 Discord 관리자 해제
+
+검증된 Discord 계정과 역할 상태를 직접 입력한 과거 ID와 구분해 표시한다. 운영자만 회원의 해제 요청을 확인한 뒤 Discord 연결을 해제하고 역할 회수를 요청한다. 접근 정지는 Discord 인증 역할과 게임 접근에 함께 적용하며, 개별 게임 서버 범위 제한은 Discord 역할의 회수 사유가 아니다.
+
+합성 loopback API를 실제 브라우저에서 조작해 확인 체크 전 해제 버튼 비활성, CSRF를 포함한 Discord 대상 DELETE, 목록 갱신, Minecraft 연결 유지, 390px 가로 넘침 없음을 확인했다. TypeScript·production build와 React 구성 검토를 통과했다. 이 검사는 실제 Discord 계정 해제·역할 회수 성공을 뜻하지 않는다.

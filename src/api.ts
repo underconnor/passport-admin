@@ -39,6 +39,7 @@ const messages: Record<string, string> = {
     "사용할 수 없는 서버 범위입니다. 목록을 새로고침해 주세요.",
   subject_not_found: "회원을 찾을 수 없습니다. 목록을 새로고침해 주세요.",
   minecraft_not_linked: "이미 Minecraft 연결이 해제된 회원입니다.",
+  discord_not_linked: "이미 Discord 연결이 해제된 회원입니다. 목록을 새로고침해 주세요.",
   approval_required:
     "명부 변경에 확인이 필요합니다. 미리보기를 확인한 뒤 승인해 주세요.",
   approval_mismatch:

@@ -10,6 +10,13 @@ import type {
   ServerDefinition,
 } from "./types";
 
+const discordRoleLabels = {
+  pending: "인증 역할 반영 대기",
+  granted: "인증 역할 지급됨",
+  revoked: "인증 역할 회수됨",
+  failed: "역할 반영 실패 · 봇 설정 확인 필요",
+};
+
 function MemberEditor({
   member,
   servers,
@@ -78,8 +85,8 @@ function MemberEditor({
           disabled={busy}
         />
         <span>
-          <strong>모든 서버 접근 정지</strong>
-          <small>명부 상태와 별개로 게임 접근을 제한합니다.</small>
+          <strong>회원 접근 정지</strong>
+          <small>게임 접근을 제한하고 Discord 인증 역할을 회수합니다.</small>
         </span>
       </label>
       <label className="check-row">
@@ -151,12 +158,14 @@ function MemberEditor({
 
 function UnlinkDialog({
   member,
+  provider,
   csrfToken,
   onClose,
   onSaved,
   onError,
 }: {
   member: Member;
+  provider: "minecraft" | "discord";
   csrfToken: string;
   onClose: () => void;
   onSaved: (notice: string) => Promise<void>;
@@ -165,15 +174,19 @@ function UnlinkDialog({
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const label = provider === "minecraft" ? "Minecraft" : "Discord";
+  const account = provider === "minecraft"
+    ? member.minecraft?.name
+    : member.discordConnection?.displayName || member.discordConnection?.username || member.discordId;
   async function unlink() {
     setBusy(true);
     setError("");
     try {
-      await api(`/admin/members/${encodeURIComponent(member.id)}/minecraft`, {
+      await api(`/admin/members/${encodeURIComponent(member.id)}/${provider}`, {
         method: "DELETE",
         csrfToken,
       });
-      await onSaved(`${member.displayName}님의 Minecraft 연결을 해제했습니다.`);
+      await onSaved(`${member.displayName}님의 ${label} 연결을 해제했습니다.${provider === "discord" ? " 인증 역할 회수도 요청했습니다." : ""}`);
     } catch (failure) {
       setError(errorMessage(failure));
       onError(failure);
@@ -182,14 +195,15 @@ function UnlinkDialog({
     }
   }
   return (
-    <Dialog title="Minecraft 연결 해제" busy={busy} onClose={onClose}>
+    <Dialog title={`${label} 연결 해제`} busy={busy} onClose={onClose}>
       <p>
         <strong>{member.displayName}</strong>님과{" "}
-        <strong>{member.minecraft?.name}</strong> 계정의 연결을 해제합니다.
+        <strong>{account}</strong> 계정의 연결을 해제합니다.
       </p>
       <p className="helper dialog-description">
-        해당 Minecraft 계정의 접근 정책이 갱신되고 진행 중인 연결 요청이
-        취소됩니다. 다시 이용하려면 웹과 게임에서 새로 연결해야 합니다.
+        {provider === "minecraft"
+          ? "해당 Minecraft 계정의 접근 정책이 갱신되고 진행 중인 연결 요청이 취소됩니다. 다시 이용하려면 게임에서 새 인증 링크를 열어야 합니다."
+          : "회원의 해제 요청과 대상 계정을 확인해 주세요. 진행 중인 Discord 연결 요청이 취소되고 봇에 인증 역할 회수가 요청됩니다. 다시 연결하려면 Discord의 연동하기 버튼을 이용해야 합니다."}
       </p>
       <label className="check-row">
         <input
@@ -237,7 +251,7 @@ export function MembersView({
   const [notice, setNotice] = useState("");
   const [selection, setSelection] = useState<{
     member: Member;
-    action: "access" | "unlink";
+    action: "access" | "unlink" | "unlink-discord";
   } | null>(null);
   const load = useCallback(
     async (nextCursor?: string, signal?: AbortSignal) => {
@@ -330,15 +344,21 @@ export function MembersView({
                     <dd>{member.minecraft?.name ?? "연결 없음"}</dd>
                   </div>
                   <div>
-                    <dt>Discord ID</dt>
+                    <dt>Discord</dt>
                     <dd>
-                      {member.discordId ? (
+                      {member.discordConnection ? (
+                        <>
+                          {member.discordConnection.displayName || member.discordConnection.username}
+                          <small>{member.discordConnection.discordId} · 학교 계정 연결 완료</small>
+                          <small>{discordRoleLabels[member.discordConnection.roleStatus]}</small>
+                        </>
+                      ) : member.discordId ? (
                         <>
                           {member.discordId}
                           <small>직접 입력 · 소유권 미확인</small>
                         </>
                       ) : (
-                        "입력 없음"
+                        "연결 없음"
                       )}
                     </dd>
                   </div>
@@ -376,6 +396,13 @@ export function MembersView({
                   >
                     Minecraft 연결 해제
                   </button>
+                  <button
+                    className="text-button danger"
+                    disabled={!member.discordConnection && !member.discordId}
+                    onClick={() => setSelection({ member, action: "unlink-discord" })}
+                  >
+                    Discord 연결 해제
+                  </button>
                 </div>
               </article>
             ))}
@@ -412,9 +439,11 @@ export function MembersView({
           onSaved={saved}
           onError={onError}
         />
-      ) : selection?.action === "unlink" ? (
+      ) : selection?.action === "unlink" || selection?.action === "unlink-discord" ? (
         <UnlinkDialog
+          key={`${selection.member.id}:${selection.action}`}
           member={selection.member}
+          provider={selection.action === "unlink" ? "minecraft" : "discord"}
           csrfToken={csrfToken}
           onClose={() => setSelection(null)}
           onSaved={saved}
