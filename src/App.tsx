@@ -294,7 +294,7 @@ export function App() {
           onError={authorizationFailure}
         />
       ) : view === "stats" ? (
-        <StatsView endpoint="/admin/stats" title="주요 지표" onError={authorizationFailure} />
+        <StatsView key={accessKey} csrfToken={auth.csrfToken} canWrite={canWrite} endpoint="/admin/stats" title="주요 지표" onError={authorizationFailure} />
       ) : view === "audit" ? (
         <AuditView onError={authorizationFailure} />
       ) : (

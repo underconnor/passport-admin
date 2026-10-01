@@ -14,7 +14,8 @@
     "test": "node --experimental-strip-types --test test/discord.test.mjs",
     "test:browser-discord": "npm run build && node --test test/discord-management.browser.mjs",
     "test:browser-members": "npm run build && node --test test/members-management.browser.mjs",
-    "test:browser-operators": "npm run build && node --test test/operators-management.browser.mjs"
+    "test:browser-operators": "npm run build && node --test test/operators-management.browser.mjs",
+    "test:browser-statistics-controls": "npm run build && node --test test/statistics-controls.browser.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

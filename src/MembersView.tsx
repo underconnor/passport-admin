@@ -362,7 +362,7 @@ export function MembersView({ csrfToken, servers, onError, canWrite, manageOpera
             <button className="text-button" disabled={!member.discordConnection && !member.discordId} onClick={() => setSelection({ member, action: "unlink-discord" })}>Discord 연결 해제</button>
             <button className="text-button danger member-delete" onClick={() => setSelection({ member, action: "delete" })}>회원 정보 삭제</button></> : null}
           </div>}
-          {statsMember === member.id ? <div className="member-stats"><StatsView endpoint={`/admin/members/${encodeURIComponent(member.id)}/stats`} title={`${member.displayName}님의 플레이 기록`} onError={onError} /></div> : null}
+          {statsMember === member.id ? <div className="member-stats"><StatsView csrfToken={csrfToken} canWrite={canWrite} subjectId={member.id} subjectLabel={member.displayName} endpoint={`/admin/members/${encodeURIComponent(member.id)}/stats`} title={`${member.displayName}님의 플레이 기록`} onError={onError} /></div> : null}
         </div> : null}
       </article>)}
       {!members.length ? <div className="empty-state"><h3>{loading ? "회원 목록을 불러오고 있어요" : error ? "목록을 다시 불러와 주세요" : query || membership !== "all" ? "조건에 맞는 사용자가 없습니다" : "등록된 사용자가 없습니다"}</h3><p>{loading ? "잠시만 기다려 주세요." : error ? "목록 새로고침으로 다시 시도할 수 있습니다." : "학교 인증을 완료한 사용자가 이곳에 표시됩니다."}</p></div> : null}

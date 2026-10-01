@@ -5,6 +5,7 @@ export interface ServerDefinition {
   enabled?: boolean;
 }
 export interface ManagedServer extends ServerDefinition {
+  statisticsEnabled?: boolean;
   enabled: boolean;
   accessMode: "roster" | "members" | "selected" | "university";
   allowedSubjectIds: string[];

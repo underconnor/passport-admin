@@ -4,6 +4,9 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  statistics_settings_changed: "다른 곳에서 수집 설정이 변경되었습니다. 최신 설정을 확인한 뒤 다시 시도해 주세요.",
+  statistics_reset_changed: "초기화 대상의 연결 또는 기록 상태가 변경되었습니다. 영향을 다시 확인해 주세요.",
+  statistics_reset_too_large: "초기화 범위가 너무 큽니다. 서버나 회원을 선택해 범위를 좁혀 주세요.",
   target_university_login_required: "대상자의 학교 인증이 만료되었습니다. 먼저 학교 재인증을 요청해 주세요.",
   operator_already_enrolled: "이미 등록된 운영자입니다. 운영자 목록을 확인해 주세요.",
   invitation_pending: "이 계정에 수락 대기 중인 초대가 있습니다. 초대 내역을 확인해 주세요.",

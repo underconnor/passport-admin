@@ -12,6 +12,7 @@ function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
 }) {
   const [label, setLabel] = useState(server.label);
   const [enabled, setEnabled] = useState(server.enabled);
+  const [statisticsEnabled, setStatisticsEnabled] = useState(server.statisticsEnabled);
   const [sensitive, setSensitive] = useState(Boolean(server.sensitive));
   const [accessMode, setAccessMode] = useState(server.accessMode);
   // Preserve selected members outside the loaded page when changing a setting.
@@ -43,6 +44,7 @@ function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
       await api(`/admin/servers/${encodeURIComponent(server.id)}`, {
         method: "PUT", csrfToken,
         body: { label: label.trim(), enabled, sensitive, accessMode,
+          ...(statisticsEnabled === undefined ? {} : { statisticsEnabled }),
           allowedSubjectIds: accessMode === "selected" ? selected : [], expectedUpdatedAt: server.updatedAt },
       });
       await onSaved();
@@ -77,6 +79,11 @@ function ServerEditor({ server, csrfToken, onClose, onSaved, onError }: {
       {cursor ? <button type="button" disabled={loading} onClick={() => void loadMembers(cursor)}>회원 더 보기</button> : null}
       {!selected.length ? <p className="helper warning">선택한 회원이 없어 모든 회원의 접속이 제한됩니다.</p> : null}
     </fieldset> : null}
+    {statisticsEnabled !== undefined ? <label className="check-row server-statistics-setting">
+      <input type="checkbox" checked={statisticsEnabled} onChange={event => setStatisticsEnabled(event.target.checked)} disabled={busy} />
+      <span><strong>이 서버 통계 수집</strong><small>끄면 새 기록 수집과 전체 합계 표시를 중지합니다. 기존 기록은 보관합니다. 사용자도 본인 수집을 켠 경우에만 기록됩니다.</small></span>
+    </label> : null}
+    {statisticsEnabled !== server.statisticsEnabled ? <p className="helper warning">변경 시 다른 서버에서 아직 전송하지 않은 짧은 구간의 기록도 일부 누락될 수 있습니다.</p> : null}
     <label className="check-row">
       <input type="checkbox" checked={sensitive} onChange={e => setSensitive(e.target.checked)} disabled={busy} />
       <span><strong>민감 서버로 표시</strong><small>접근 관리에서 별도로 구분합니다. 서버 이동 시에는 항상 최신 권한을 확인합니다.</small></span>
@@ -137,6 +144,7 @@ export function ServersView({ csrfToken, onError, onChanged, canWrite }: {
           <dl className="member-facts">
             <div><dt>프록시 등록</dt><dd>{server.proxyAvailable ? "확인됨" : "확인되지 않음"}</dd></div>
             <div><dt>플러그인 최근 응답</dt><dd>{dateTime(server.paperSeenAt)}</dd></div>
+            <div><dt>통계 수집</dt><dd>{server.statisticsEnabled === true ? "켜짐" : server.statisticsEnabled === false ? "꺼짐 · 합계 제외" : "확인 필요"}</dd></div>
             <div><dt>서버 구분</dt><dd>{server.sensitive ? "민감 서버" : "일반 서버"}</dd></div>
           </dl>
           {canWrite ? <div className="member-actions"><button onClick={() => setSelection(server)}>접근 및 설정</button></div> : null}
