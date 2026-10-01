@@ -132,8 +132,9 @@ test('compact admin records preserve server-side search and destructive-action s
       await browser('select','.stats-scope select','fixture'); await until('document.querySelector(".stats-metric strong").textContent === "1시간 1분"');
       await browser('set','viewport','390','844'); assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true); await browser('screenshot','/tmp/passport-admin-stats-mobile.png','--full');
       await click('회원 관리'); await until('document.querySelectorAll(".member-summary").length === 20'); await search('가상나래'); await expand(); await until('Boolean(document.querySelector(".member-expanded"))');
-      assert.equal(state.statsReads.length,2); await click('플레이 기록'); await until('document.querySelectorAll(".member-stats .stats-metric").length === 8');
+      assert.equal(state.statsReads.length,2); state.extraCounters={...state.extraCounters,playSeconds:18}; await click('플레이 기록'); await until('document.querySelectorAll(".member-stats .stats-metric").length === 8');
       assert.equal(state.statsReads.at(-1),`/v1/admin/members/${member(1).id}/stats`);
+      assert.equal(await inspect('document.querySelector(".member-stats .stats-metric strong").textContent'),'18초');
       state.authorized=false; await click('기록 새로고침'); await until('document.querySelector("#member-search") === null'); assert.equal(await inspect('document.querySelectorAll(".stats-metric").length'),0);
     });
     await t.test('late old search cannot replace a new filter and authorization loss clears personal controls',async () => {
