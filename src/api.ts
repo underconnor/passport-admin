@@ -4,6 +4,14 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  discord_config_mismatch: "운영 환경과 저장된 학교 인증 역할이 다릅니다. 서버 설정을 확인해 주세요.",
+  discord_role_conflict: "이전에 다른 용도로 사용한 역할입니다. 새 역할 ID를 사용해 주세요.",
+  discord_role_limit: "관리한 역할 수가 한도에 도달했습니다. 운영 담당자에게 확인해 주세요.",
+  discord_settings_changed: "다른 운영자가 봇 설정을 변경했습니다. 최신 설정을 확인한 뒤 다시 저장해 주세요.",
+  discord_settings_invalid: "역할 ID, 중복 역할과 현재 학기에 해당하는 학기 역할을 확인해 주세요.",
+  invalid_discord_settings: "역할 ID와 학기 설정을 확인해 주세요.",
+  discord_not_configured: "운영 환경의 Discord 봇 설정이 필요합니다.",
+  invalid_discord_role: "사용할 수 없는 Discord 역할입니다. 역할 ID와 중복 설정을 확인해 주세요.",
   server_changed: "다른 곳에서 서버 설정이 변경되었습니다. 창을 닫고 상태를 새로고침한 뒤 다시 수정해 주세요.",
   server_not_found: "서버를 찾지 못했습니다. 목록을 다시 확인해 주세요.",
   invalid_selected_subjects: "선택한 회원을 확인해 주세요.",
@@ -94,7 +102,7 @@ export class ApiError extends Error {
     public details: unknown = null,
   ) {
     super(
-      messages[code] ??
+      (Object.hasOwn(messages, code) ? messages[code] : undefined) ??
         (status === 401
           ? "먼저 로그인해 주세요."
           : status === 403
@@ -156,5 +164,5 @@ export function errorMessage(error: unknown): string {
 }
 
 export function callbackError(code: string): string {
-  return messages[code] ?? "학교 로그인에 실패했습니다. 다시 시도해 주세요.";
+  return (Object.hasOwn(messages, code) ? messages[code] : undefined) ?? "학교 로그인에 실패했습니다. 다시 시도해 주세요.";
 }

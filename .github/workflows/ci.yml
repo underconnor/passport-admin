@@ -15,5 +15,7 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npm run check
       - run: npm run build
       - run: docker build -t passport-ui:ci .
+      - run: sh test/nginx-proxy.sh passport-ui:ci

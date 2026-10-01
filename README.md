@@ -48,3 +48,18 @@ docker build -t passport-admin:dev .
 ## 화면 기준
 
 ALMS v4 A의 중립 회색·블루 레이아웃과 사용자가 지정한 Pretendard를 적용했습니다. 서체·아이콘을 자체 호스팅하며 외부 CDN을 사용하지 않습니다. 치수·색상·출처는 [화면 기준과 에셋](docs/design-system.md)을 참고하세요.
+
+
+## Discord 봇 관리
+
+별도 **Discord 봇** 메뉴에서 현재 회원 역할 ID, 현재 학기, 최대 40개의 누적 학기 역할 매핑과 닉네임 동기화를 관리합니다. Discord 서버와 학교 인증 역할은 운영 환경에 고정되어 읽기 전용으로 표시합니다. 서버가 제공한 revision으로 저장 충돌을 검사하며, 다른 운영자의 변경을 덮어쓰지 않습니다. 현재 학기를 바꾸기 전에 회원 명부를 해당 학기 기준으로 갱신해야 합니다. 학기 변경은 명부의 열/헤더를 자동 변경하지 않으며 이전 학기 이력은 유지합니다. 현재 학기를 지정하면 같은 학기의 역할 매핑이 필요하고 역할 ID·학기 중복과 @everyone은 허용하지 않습니다.
+
+- `GET /v1/admin/discord`: 설정과 연결 수·역할/닉네임 처리 대기·실패 수
+- `PUT /v1/admin/discord`: 수정 가능한 설정과 `expectedRevision`, CSRF로 저장
+- `POST /v1/admin/discord/reconcile`: 현재 revision과 CSRF로 재동기화 요청
+
+설정 저장·재동기화 접수와 봇의 실제 반영 완료를 구분합니다. 화면이 보일 때 15초 간격으로 상태를 갱신하며 편집 중인 입력은 유지합니다. 닉네임 실패는 역할 성공과 별개이고, 서버 소유자나 봇과 같거나 높은 역할의 계정은 닉네임을 바꿀 수 없음을 안내합니다. 봇 토큰은 입력하거나 응답에서 받지 않습니다.
+
+`npm run check`, `npm run test:browser-discord`로 단위·루프백 합성 브라우저 회귀를 실행합니다. 기존 설치된 agent-browser 실행 파일을 사용하려면 `PASSPORT_AGENT_BROWSER=/path/to/agent-browser`를 지정할 수 있습니다. 지정하지 않으면 `npx agent-browser@0.38.1`을 사용합니다.
+
+nginx는 `/v1/`과 `/v2/`를 같은 API로 전달합니다. CI의 `test/nginx-proxy.sh`는 실제 nginx 컨테이너와 폐기 가능한 가상 API로 GET/POST 경로·Host·보안 헤더·SPA 응답을 검사하며 운영 서비스에 접속하지 않습니다.

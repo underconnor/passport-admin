@@ -877,7 +877,7 @@ input:disabled {
   }
   .app-sidebar nav {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 4px;
     padding-bottom: 10px;
   }
@@ -1503,3 +1503,19 @@ select:focus-visible { outline: 3px solid #9fc4ff; outline-offset: 2px; }
 .managed-server-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
 .server-discovery-note { color: var(--muted); background: var(--surface); border: 1px solid var(--border); }
 @media (max-width: 800px) { .managed-server-grid { grid-template-columns: 1fr; } }
+
+.discord-admin { display: grid; gap: 18px; }
+.discord-admin .section-toolbar { margin: 0; }
+.discord-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.discord-stats > div { padding: 14px; background: var(--background); border-radius: 8px; }
+.discord-stats span { display: block; font-size: 12px; color: var(--muted); }
+.discord-stats strong { display: block; font-size: 25px; line-height: 1.5; }
+.discord-reconcile, .discord-term-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 18px; }
+.discord-reconcile { border-top: 1px solid var(--border); padding-top: 18px; }
+.discord-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.discord-fields > input { max-width: 420px; }
+.discord-term-row { display: grid; grid-template-columns: minmax(72px, 0.4fr) minmax(150px, 1fr) auto; align-items: end; gap: 12px; margin-top: 12px; max-width: 620px; }
+.discord-term-row label { font-size: 12px; color: var(--muted); }
+.discord-term-row input { display: block; margin-top: 5px; width: 100%; min-width: 0; }
+.discord-save { display: flex; justify-content: flex-end; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
+@media (max-width: 760px) { .discord-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .discord-reconcile { align-items: flex-start; flex-direction: column; } .discord-term-row { gap: 8px; grid-template-columns: 64px minmax(0, 1fr) auto; } .discord-term-row button { padding: 0 8px; } }
