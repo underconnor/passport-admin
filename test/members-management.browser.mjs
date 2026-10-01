@@ -12,7 +12,7 @@ const session = `passport-admin-members-${process.pid}`;
 const future = new Date(Date.now() + 86_400_000).toISOString();
 const member = (i) => ({ id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`, revision: `revision-${i}`, createdAt: '2026-01-01T00:00:00.000Z', administrator: i === 2, admissionYear: '26', studentId: `2026${String(i).padStart(4, '0')}`, presence: {online:i===1,serverId:i===1?'fixture':null,serverLabel:i===1?'합성 서버':null,lastSeenAt:future}, displayName: i === 1 ? '가상나래' : `가상 회원 ${String(i).padStart(2, '0')}`, department: '가상 학과', membershipStatus: i % 2 ? 'active' : 'inactive', roleLabel: '회원', verifiedUntil: future, universityVerifiedUntil: future, allowedServerIds: ['fixture'], eligibleServerIds: ['fixture'], accessSuspended: false, scopeRestricted: false, scopeLimit: [], discordId: null, discordConnection: { discordId: `1000000000000000${String(i).padStart(2,'0')}`, username: i === 1 ? 'cosmos' : `discord.member.${i}`, displayName: i === 1 ? '별나래' : `디스코드 ${i}`, linkedAt: future, roleStatus: 'granted', roleUpdatedAt: future }, minecraft: { name: i === 1 ? 'MineQuartz' : `Synthetic${i}`, uuid: `00000000-0000-4000-8000-${String(i + 100).padStart(12, '0')}` } });
 let state;
-const reset = () => { state = { authorized: true, statsReads: [], rows: Array.from({length: 25}, (_, i) => member(i + 1)), reads: [], writes: [], deleteError: null, hold: false, release: null }; };
+const reset = () => { state = { authorized: true, statsReads: [], extraCounters: {}, rows: Array.from({length: 25}, (_, i) => member(i + 1)), reads: [], writes: [], deleteError: null, hold: false, release: null }; };
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://127.0.0.1');
   const json = (code, data) => { res.writeHead(code, {'Content-Type':'application/json','Cache-Control':'no-store'}); res.end(JSON.stringify(data)); };
@@ -38,7 +38,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/v1/admin/stats' || /^\/v1\/admin\/members\/[^/]+\/stats$/.test(url.pathname)) {
     state.statsReads.push(url.pathname);
     if (!state.authorized) return json(403,{code:'admin_required'});
-    const counters={playSeconds:7260,blocksBroken:15000,blocksPlaced:4200,damageTakenMilli:50000,deaths:10,mobKills:380};
+    const counters={playSeconds:7260,blocksBroken:15000,blocksPlaced:4200,damageTakenMilli:50000,deaths:10,mobKills:380,...state.extraCounters};
     return json(200,{available:true,totals:counters,servers:[{serverId:'fixture',label:'합성 서버',...counters,playSeconds:3660,onlinePlayerCount:1}],...(url.pathname==='/v1/admin/stats'?{playerCount:25,onlinePlayerCount:1}:{presence:member(1).presence})});
   }
   if (url.pathname.startsWith('/v1/admin/members/') && ['DELETE','PUT'].includes(req.method)) {
@@ -123,13 +123,16 @@ test('compact admin records preserve server-side search and destructive-action s
     });
 
     await t.test('admin overall statistics and expanded personal records only request authorized endpoints',async () => {
-      reset(); await open(origin); await click('플레이 통계'); await until('document.querySelectorAll(".stats-metric").length === 6');
+      reset(); await open(origin); await click('플레이 통계'); await until('document.querySelectorAll(".stats-metric").length === 8');
       assert.deepEqual(state.statsReads,['/v1/admin/stats']); assert.equal(await inspect('document.querySelector(".stats-presence strong").textContent'),'현재 접속 1명'); assert.equal(await inspect('document.querySelector(".stats-metric strong").textContent'),'2시간 1분');
+      assert.deepEqual(await inspect('[...document.querySelectorAll(".stats-metric")].slice(-2).map(el=>el.querySelector("strong").textContent)'),['0','0 m']);
+      state.extraCounters={playerKills:3,distanceCm:123456};await click('기록 새로고침');await until('document.querySelectorAll(".stats-metric").length === 8');
+      assert.deepEqual(await inspect('[...document.querySelectorAll(".stats-metric")].slice(-2).map(el=>[el.querySelector("span").textContent,el.querySelector("strong").textContent])'),[['플레이어 처치','3'],['이동 거리','1.2 km']]);
       await browser('set','viewport','1440','900'); await browser('screenshot','/tmp/passport-admin-stats-desktop.png');
       await browser('select','.stats-scope select','fixture'); await until('document.querySelector(".stats-metric strong").textContent === "1시간 1분"');
-      await browser('set','viewport','390','844'); assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true); await browser('screenshot','/tmp/passport-admin-stats-mobile.png');
+      await browser('set','viewport','390','844'); assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true); await browser('screenshot','/tmp/passport-admin-stats-mobile.png','--full');
       await click('회원 관리'); await until('document.querySelectorAll(".member-summary").length === 20'); await search('가상나래'); await expand(); await until('Boolean(document.querySelector(".member-expanded"))');
-      assert.equal(state.statsReads.length,1); await click('플레이 기록'); await until('document.querySelectorAll(".member-stats .stats-metric").length === 6');
+      assert.equal(state.statsReads.length,2); await click('플레이 기록'); await until('document.querySelectorAll(".member-stats .stats-metric").length === 8');
       assert.equal(state.statsReads.at(-1),`/v1/admin/members/${member(1).id}/stats`);
       state.authorized=false; await click('기록 새로고침'); await until('document.querySelector("#member-search") === null'); assert.equal(await inspect('document.querySelectorAll(".stats-metric").length'),0);
     });

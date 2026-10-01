@@ -8,6 +8,8 @@ export interface PlayCounters {
   damageTakenMilli: number;
   deaths: number;
   mobKills: number;
+  playerKills?: number;
+  distanceCm?: number;
 }
 export interface PlayerPresence { online: boolean; serverId: string | null; serverLabel: string | null; lastSeenAt: string | null; }
 export interface PlayStatistics {
@@ -22,6 +24,10 @@ const number = (value: number) => new Intl.NumberFormat("ko-KR", { maximumFracti
 function playTime(value: number) {
   const minutes = Math.floor(value / 60);
   return minutes >= 60 ? `${number(Math.floor(minutes / 60))}시간 ${minutes % 60}분` : `${number(minutes)}분`;
+}
+function travelDistance(centimeters = 0) {
+  const meters = centimeters / 100;
+  return meters >= 1000 ? `${number(meters / 1000)} km` : `${number(Math.floor(meters))} m`;
 }
 export function StatsView({ endpoint, title = "누적 플레이 기록", onError }: { endpoint: string; title?: string; onError?: (error: unknown) => void }) {
   const [data, setData] = useState<PlayStatistics | null>(null);
@@ -46,6 +52,8 @@ export function StatsView({ endpoint, title = "누적 플레이 기록", onError
     { label: "받은 피해", value: number(counters.damageTakenMilli / 1000), unit: "피해량" },
     { label: "죽은 횟수", value: number(counters.deaths), unit: "회" },
     { label: "처치한 몹", value: number(counters.mobKills), unit: "마리" },
+    { label: "플레이어 처치", value: number(counters.playerKills ?? 0), unit: "회" },
+    { label: "이동 거리", value: travelDistance(counters.distanceCm), unit: "대략적인 누적 거리" },
   ] : [];
   return <section className="stats-view" aria-label={title} aria-busy={loading}>
     <div className="stats-toolbar"><div><h2>{title}</h2>{data?.available && data.playerCount !== undefined ? <p>플레이어 {number(data.playerCount)}명이 함께 만든 기록</p> : <p>서버가 마지막으로 전송한 누적 기록입니다.</p>}</div><button onClick={() => setRefresh(current => current + 1)} disabled={loading}>기록 새로고침</button></div>
