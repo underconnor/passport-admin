@@ -10,7 +10,7 @@ const run = promisify(execFile);
 const dist = fileURLToPath(new URL('../dist/', import.meta.url));
 const session = `passport-admin-members-${process.pid}`;
 const future = new Date(Date.now() + 86_400_000).toISOString();
-const member = (i) => ({ id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`, revision: `revision-${i}`, createdAt: '2026-01-01T00:00:00.000Z', administrator: i === 2, admissionYear: '26', presence: {online:i===1,serverId:i===1?'fixture':null,serverLabel:i===1?'합성 서버':null,lastSeenAt:future}, displayName: i === 1 ? '가상나래' : `가상 회원 ${String(i).padStart(2, '0')}`, department: '가상 학과', membershipStatus: i % 2 ? 'active' : 'inactive', roleLabel: '회원', verifiedUntil: future, universityVerifiedUntil: future, allowedServerIds: ['fixture'], eligibleServerIds: ['fixture'], accessSuspended: false, scopeRestricted: false, scopeLimit: [], discordId: null, discordConnection: { discordId: `1000000000000000${String(i).padStart(2,'0')}`, username: i === 1 ? 'cosmos' : `discord.member.${i}`, displayName: i === 1 ? '별나래' : `디스코드 ${i}`, linkedAt: future, roleStatus: 'granted', roleUpdatedAt: future }, minecraft: { name: i === 1 ? 'MineQuartz' : `Synthetic${i}`, uuid: `00000000-0000-4000-8000-${String(i + 100).padStart(12, '0')}` } });
+const member = (i) => ({ id: `00000000-0000-4000-8000-${String(i).padStart(12, '0')}`, revision: `revision-${i}`, createdAt: '2026-01-01T00:00:00.000Z', administrator: i === 2, admissionYear: '26', studentId: `2026${String(i).padStart(4, '0')}`, presence: {online:i===1,serverId:i===1?'fixture':null,serverLabel:i===1?'합성 서버':null,lastSeenAt:future}, displayName: i === 1 ? '가상나래' : `가상 회원 ${String(i).padStart(2, '0')}`, department: '가상 학과', membershipStatus: i % 2 ? 'active' : 'inactive', roleLabel: '회원', verifiedUntil: future, universityVerifiedUntil: future, allowedServerIds: ['fixture'], eligibleServerIds: ['fixture'], accessSuspended: false, scopeRestricted: false, scopeLimit: [], discordId: null, discordConnection: { discordId: `1000000000000000${String(i).padStart(2,'0')}`, username: i === 1 ? 'cosmos' : `discord.member.${i}`, displayName: i === 1 ? '별나래' : `디스코드 ${i}`, linkedAt: future, roleStatus: 'granted', roleUpdatedAt: future }, minecraft: { name: i === 1 ? 'MineQuartz' : `Synthetic${i}`, uuid: `00000000-0000-4000-8000-${String(i + 100).padStart(12, '0')}` } });
 let state;
 const reset = () => { state = { authorized: true, statsReads: [], rows: Array.from({length: 25}, (_, i) => member(i + 1)), reads: [], writes: [], deleteError: null, hold: false, release: null }; };
 const server = http.createServer(async (req, res) => {
@@ -26,7 +26,7 @@ const server = http.createServer(async (req, res) => {
     state.reads.push(Object.fromEntries(url.searchParams));
     let rows = state.rows;
     const q = (url.searchParams.get('q') || '').toLowerCase();
-    if (q) rows = rows.filter(row => [row.displayName,row.minecraft.name,row.discordConnection.username,row.discordConnection.displayName,row.discordConnection.discordId,...(row.id === member(1).id ? ['20260001'] : [])].some(value => value.toLowerCase().includes(q)));
+    if (q) rows = rows.filter(row => [row.displayName,row.minecraft.name,row.discordConnection.username,row.discordConnection.displayName,row.discordConnection.discordId,row.studentId].filter(Boolean).some(value => value.toLowerCase().includes(q)));
     const filter = url.searchParams.get('membership'); if (filter && filter !== 'all') rows = rows.filter(row => row.membershipStatus === filter);
     if (url.searchParams.get('sort') === 'newest') rows = [...rows].reverse();
     const total = rows.length; const cursor = url.searchParams.get('cursor'); if (cursor) rows = rows.slice(20);
@@ -81,6 +81,23 @@ test('compact admin records preserve server-side search and destructive-action s
       await browser('set','viewport','390','844');assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true);await browser('screenshot','/tmp/passport-admin-members-mobile.png');
       await click('서버 관리');await until('Boolean(document.querySelector(".server-summary"))');await browser('click','.server-summary');assert.equal(await inspect('Boolean(document.querySelector(".server-expanded"))'),true);assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true);
       await browser('screenshot','/tmp/passport-admin-servers-mobile.png');
+    });
+    await t.test('verified full student IDs appear in summary and details while absent and legacy values require reauthentication',async () => {
+      reset();state.rows=[member(1),{...member(2),studentId:null},member(3)];delete state.rows[2].studentId;
+      await open(origin);await browser('set','viewport','1440','1000');
+      assert.match(await inspect('document.querySelector(".member-summary-name small").textContent'),/^20260001 · 가상 학과/);
+      await browser('click','.member-summary:first-child');await until('Boolean(document.querySelector(".member-expanded"))');
+      assert.deepEqual(await inspect('[...document.querySelector(".member-facts").firstElementChild.children].map(el => el.textContent)'),['학번','20260001']);
+      assert.equal(await inspect('document.body.textContent.includes("입학 학번") || document.body.textContent.includes("26학번")'),false);
+      await browser('screenshot','/tmp/passport-admin-full-student-id-desktop.png');
+      await browser('set','viewport','390','844');assert.equal(await inspect('document.documentElement.scrollWidth <= innerWidth'),true);
+      await browser('screenshot','/tmp/passport-admin-full-student-id-mobile.png');
+      for (const row of [2,3]) {
+        await browser('click',`.member-row:nth-of-type(${row}) .member-summary`);await until('Boolean(document.querySelector(".member-expanded"))');
+        assert.equal(await inspect('document.querySelector(".member-facts dd").textContent'),'학교 재인증 필요');
+        assert.match(await inspect(`document.querySelector('.member-row:nth-of-type(${row}) .member-summary-name small').textContent`),/^학교 재인증 필요/);
+      }
+      assert.equal(await inspect('localStorage.length + sessionStorage.length'),0);assert.equal(await inspect('location.search'),'');assert.equal(state.writes.length,0);
     });
     await t.test('all identity searches, member filters, sorting and opaque next/previous pagination reach API',async () => {
       reset();await open(origin);

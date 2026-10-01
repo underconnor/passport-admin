@@ -340,7 +340,7 @@ export function MembersView({ csrfToken, servers, onError }: {
       <div className="member-list-labels" aria-hidden="true"><span>사용자</span><span>회원 구분</span><span>Minecraft</span><span>Discord</span><span /></div>
       {members.map(member => <article className="member-row" key={member.id}>
         <button className="member-summary" aria-expanded={expanded === member.id} aria-controls={`member-detail-${member.id}`} onClick={() => { setExpanded(expanded === member.id ? null : member.id); setEditing(null); setStatsMember(null); }}>
-          <span className="member-summary-name"><strong>{member.displayName}</strong><small>{member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</small></span>
+          <span className="member-summary-name"><strong>{member.displayName}</strong><small>{member.studentId || "학교 재인증 필요"} · {member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</small></span>
           <span className={`member-kind ${currentMembership(member).tone}`}>{currentMembership(member).label}</span>
           <span className="member-summary-minecraft">{member.minecraft?.name ?? "연결 없음"}{member.presence ? <span className={`member-presence ${member.presence.online ? "is-online" : ""}`}><span className="presence-dot" /><span>{member.presence.online ? `접속 중${member.presence.serverLabel ? ` · ${member.presence.serverLabel}` : ""}` : "오프라인"}</span></span> : null}</span>
           <span className="member-summary-discord">{member.discordConnection?.displayName || member.discordConnection?.username || (member.discordId ? member.discordId : "연결 없음")}</span>
@@ -348,7 +348,7 @@ export function MembersView({ csrfToken, servers, onError }: {
         </button>
         {expanded === member.id ? <div className="member-expanded" id={`member-detail-${member.id}`}>
           <dl className="member-facts">
-            {member.admissionYear ? <div><dt>입학 학번</dt><dd>{member.admissionYear}학번</dd></div> : null}
+            <div><dt>학번</dt><dd>{member.studentId || "학교 재인증 필요"}</dd></div>
             <div><dt>Minecraft</dt><dd>{member.minecraft?.name ?? "연결 없음"}</dd></div>
             <div><dt>Discord</dt><dd>{member.discordConnection ? <>{member.discordConnection.username}<small>{member.discordConnection.discordId} · {discordRoleLabels[member.discordConnection.roleStatus]}</small></> : member.discordId ?? "연결 없음"}</dd></div>
             {member.presence ? <div><dt>현재 접속</dt><dd>{member.presence.online ? member.presence.serverLabel || "접속 중" : "오프라인"}<small>마지막 확인 {dateTime(member.presence.lastSeenAt)}</small></dd></div> : null}
