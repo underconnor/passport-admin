@@ -90,6 +90,11 @@ test('compact admin records preserve server-side search and destructive-action s
       await browser('select','#membership-filter','active');await until('document.querySelectorAll(".member-summary").length === 13');await browser('select','#member-sort','newest');await until('document.querySelector(".member-summary-name strong").textContent === "가상 회원 25"');
       assert.equal(state.reads.at(-1).sort,'newest');assert.equal(state.reads.at(-1).membership,'active');assert.equal(await inspect('localStorage.length + sessionStorage.length'),0);assert.equal(await inspect('location.search'), '');
     });
+    await t.test('an expired roster confirmation never presents the account as a current club member',async () => {
+      reset();state.rows=[{...member(1),verifiedUntil:'2000-01-01T00:00:00.000Z'}];await open(origin);
+      assert.equal(await inspect('document.querySelector(".member-kind").textContent'),'회원 확인 만료');
+      assert.equal(await inspect('document.querySelector(".member-kind").classList.contains("member-kind-active")'),false);
+    });
     await t.test('typed target confirmation, self/last-admin protection, revision conflict and successful deletion',async () => {
       reset();await open(origin);await search('가상나래');await deleteDialog();
       assert.equal(await inspect('document.querySelector(".dialog-actions .destructive").disabled'),true);assert.equal(state.writes.length,0);

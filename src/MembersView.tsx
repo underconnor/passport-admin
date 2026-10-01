@@ -11,6 +11,15 @@ import type {
   ServerDefinition,
 } from "./types";
 
+function currentMembership(member: Member) {
+  if (member.accessSuspended) return { label: "접근 정지", tone: "member-kind-suspended" };
+  if (member.membershipStatus === "suspended") return { label: "명부 정지", tone: "member-kind-suspended" };
+  if (member.membershipStatus === "active") return new Date(member.verifiedUntil).getTime() > Date.now()
+    ? { label: "소모임 회원", tone: "member-kind-active" }
+    : { label: "회원 확인 만료", tone: "" };
+  return { label: membershipLabel(member.membershipStatus), tone: "" };
+}
+
 const discordRoleLabels = {
   pending: "인증 역할 반영 대기",
   granted: "인증 역할 지급됨",
@@ -258,7 +267,7 @@ function DeleteMemberDialog({ member, csrfToken, onClose, onSaved, onError }: {
       <div><dt>Minecraft</dt><dd>{member.minecraft?.name ?? "연결 없음"}</dd></div>
       <div><dt>Discord</dt><dd>{member.discordConnection ? `${member.discordConnection.username} · ${member.discordConnection.discordId}` : member.discordId ?? "연결 없음"}</dd></div>
     </dl>
-    <p className="helper">학교 인증, 로그인 세션과 계정 연결이 삭제되고 게임 접근·Discord 역할이 회수됩니다. 다시 이용하려면 처음부터 인증해야 합니다. 구글시트의 회원 명단은 삭제하지 않습니다.</p>
+    <p className="helper">학교 인증, 로그인 세션, 계정 연결과 플레이 기록이 삭제되고 게임 접근·Discord 역할이 회수됩니다. 다시 이용하려면 처음부터 인증해야 합니다. 구글시트의 회원 명단은 삭제하지 않습니다.</p>
     {member.administrator ? <p className="helper warning">이 계정의 관리자 권한도 함께 삭제됩니다.</p> : null}
     <label className="field-label" htmlFor="delete-member-name">확인을 위해 ‘{member.displayName}’ 입력</label>
     <input id="delete-member-name" autoComplete="off" value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={busy || stale} />
@@ -316,7 +325,7 @@ export function MembersView({ csrfToken, servers, onError }: {
     </form>
     <div className="member-filters">
       <div><label htmlFor="membership-filter">회원 구분</label><select id="membership-filter" value={membership} onChange={event => { setMembership(event.target.value); setPages([]); }}>
-        <option value="all">전체 사용자</option><option value="active">소모임 회원만</option><option value="inactive">비회원만</option><option value="suspended">정지 사용자</option>
+        <option value="all">전체 사용자</option><option value="active">소모임 회원만</option><option value="inactive">비회원·확인 대기</option><option value="suspended">정지 사용자</option>
       </select></div>
       <div><label htmlFor="member-sort">정렬</label><select id="member-sort" value={sort} onChange={event => { setSort(event.target.value); setPages([]); }}>
         <option value="name">이름순</option><option value="newest">최근 등록순</option><option value="oldest">오래된 등록순</option>
@@ -332,7 +341,7 @@ export function MembersView({ csrfToken, servers, onError }: {
       {members.map(member => <article className="member-row" key={member.id}>
         <button className="member-summary" aria-expanded={expanded === member.id} aria-controls={`member-detail-${member.id}`} onClick={() => { setExpanded(expanded === member.id ? null : member.id); setEditing(null); setStatsMember(null); }}>
           <span className="member-summary-name"><strong>{member.displayName}</strong><small>{member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</small></span>
-          <span className={`member-kind ${member.accessSuspended || member.membershipStatus === "suspended" ? "member-kind-suspended" : member.membershipStatus === "active" ? "member-kind-active" : ""}`}>{member.accessSuspended ? "접근 정지" : membershipLabel(member.membershipStatus)}</span>
+          <span className={`member-kind ${currentMembership(member).tone}`}>{currentMembership(member).label}</span>
           <span className="member-summary-minecraft">{member.minecraft?.name ?? "연결 없음"}</span>
           <span className="member-summary-discord">{member.discordConnection?.displayName || member.discordConnection?.username || (member.discordId ? member.discordId : "연결 없음")}</span>
           <span className="row-chevron" aria-hidden="true">{expanded === member.id ? "−" : "+"}</span>
