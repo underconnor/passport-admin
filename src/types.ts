@@ -42,6 +42,10 @@ export interface Overview {
 }
 export interface Member {
   id: string;
+  revision: string;
+  createdAt: string;
+  administrator: boolean;
+  admissionYear: string | null;
   displayName: string;
   department: string | null;
   membershipStatus: string;
@@ -66,6 +70,7 @@ export interface Member {
 }
 export interface MembersPage {
   members: Member[];
+  total: number;
   nextCursor: string | null;
 }
 export interface AccessInput {
@@ -108,7 +113,7 @@ export const dateTime = (value: string | null) => {
       }).format(date);
 };
 export const membershipLabel = (status: string) =>
-  ({ active: "활성", inactive: "비활성", suspended: "명부 정지" })[status] ??
+  ({ active: "소모임 회원", inactive: "비회원", suspended: "명부 정지" })[status] ??
   "확인 필요";
 export const riskLabel = (risk: string) =>
   ({

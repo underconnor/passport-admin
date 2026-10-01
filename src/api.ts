@@ -4,6 +4,10 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  subject_changed: "다른 곳에서 회원 정보가 변경되었습니다. 창을 닫고 목록을 새로고침한 뒤 다시 확인해 주세요.",
+  cannot_delete_self: "현재 로그인한 관리자 계정은 삭제할 수 없습니다. 다른 관리자에게 요청해 주세요.",
+  last_administrator: "마지막 관리자 계정은 삭제할 수 없습니다. 먼저 다른 관리자를 등록해 주세요.",
+  confirmation_mismatch: "삭제 대상의 이름을 정확히 입력해 주세요.",
   discord_config_mismatch: "운영 환경과 저장된 학교 인증 역할이 다릅니다. 서버 설정을 확인해 주세요.",
   discord_role_conflict: "이전에 다른 용도로 사용한 역할입니다. 새 역할 ID를 사용해 주세요.",
   discord_role_limit: "관리한 역할 수가 한도에 도달했습니다. 운영 담당자에게 확인해 주세요.",

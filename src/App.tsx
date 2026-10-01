@@ -8,17 +8,19 @@ import { MembersView } from "./MembersView";
 import { RosterView } from "./RosterView";
 import { ServersView } from "./ServersView";
 import { DiscordBotView } from "./DiscordBotView";
+import { StatsView } from "./StatsView";
 import { AuditView } from "./AuditView";
 import { dateTime } from "./types";
 import type { AdminSession, Overview } from "./types";
 
-type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit";
+type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats";
 const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "overview", label: "운영 현황", icon: "dashboard" },
   { id: "members", label: "회원 관리", icon: "check" },
   { id: "servers", label: "서버 관리", icon: "book" },
   { id: "roster", label: "명부 동기화", icon: "book" },
   { id: "discord", label: "Discord 봇", icon: "settings" },
+  { id: "stats", label: "플레이 통계", icon: "dashboard" },
   { id: "audit", label: "운영 기록", icon: "settings" },
 ];
 const callbackParams = new URLSearchParams(window.location.search);
@@ -192,13 +194,14 @@ export function App() {
                     ? "연결된 서버와 서버별 접속 대상을 관리합니다."
                   : view === "discord"
                     ? "학교·회원·학기 역할과 서버 닉네임 동기화를 관리합니다."
+                  : view === "stats" ? "전체 사용자와 서버별 플레이 기록을 확인합니다."
                   : view === "roster"
                     ? "새 명부를 확인한 뒤 회원 정책에 반영합니다."
                     : "관리 작업과 회원 정책 변경을 확인합니다."
               : "학교 계정으로 로그인해 등록된 운영자 권한을 확인합니다."}
           </p>
         </div>
-        {!(verified && (view === "servers" || view === "discord")) ? <button
+        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members")) ? <button
           disabled={loading || busy}
           onClick={() => {
             setError("");
@@ -263,6 +266,8 @@ export function App() {
           refresh={refreshOverview}
           onError={authorizationFailure}
         />
+      ) : view === "stats" ? (
+        <StatsView endpoint="/admin/stats" title="주요 지표" onError={authorizationFailure} />
       ) : view === "audit" ? (
         <AuditView onError={authorizationFailure} />
       ) : (

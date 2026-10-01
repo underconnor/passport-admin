@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { api, errorMessage } from "./api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, ApiError, errorMessage } from "./api";
+import { StatsView } from "./StatsView";
 import { Dialog } from "./Dialog";
 import { dateTime, membershipLabel } from "./types";
 import type {
@@ -68,11 +69,7 @@ function MemberEditor({
     }
   }
   return (
-    <Dialog
-      title={`${member.displayName} · 접근 제한`}
-      busy={busy}
-      onClose={onClose}
-    >
+    <div className="member-access-editor" aria-label={`${member.displayName} 접근 제한 수정`}>
       <p className="helper">
         서버별 접근 정책으로 허용된 범위 안에서 이 사용자의 접속을 제한합니다.
         서버 전체의 허용 대상은 서버 관리에서 변경할 수 있습니다.
@@ -152,7 +149,7 @@ function MemberEditor({
           {busy ? "저장 중…" : "접근 제한 저장"}
         </button>
       </div>
-    </Dialog>
+    </div>
   );
 }
 
@@ -235,221 +232,133 @@ function UnlinkDialog({
   );
 }
 
-export function MembersView({
-  csrfToken,
-  servers,
-  onError,
-}: {
-  csrfToken: string;
-  servers: ServerDefinition[];
-  onError: ReportError;
+function DeleteMemberDialog({ member, csrfToken, onClose, onSaved, onError }: {
+  member: Member; csrfToken: string; onClose: () => void;
+  onSaved: (notice: string) => Promise<void>; onError: ReportError;
+}) {
+  const [confirmation, setConfirmation] = useState("");
+  const [acknowledged, setAcknowledged] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [error, setError] = useState("");
+  async function remove() {
+    setBusy(true); setError("");
+    try {
+      await api(`/admin/members/${encodeURIComponent(member.id)}`, { method: "DELETE", csrfToken,
+        body: { expectedRevision: member.revision, confirmation: member.displayName } });
+      await onSaved(`${member.displayName}님의 회원 정보를 삭제하고 연결된 계정의 권한 회수를 요청했습니다.`);
+    } catch (failure) {
+      setError(errorMessage(failure)); onError(failure);
+      if (failure instanceof ApiError && failure.code === "subject_changed") setStale(true);
+    } finally { setBusy(false); }
+  }
+  return <Dialog title="회원 정보 삭제" busy={busy} onClose={onClose}>
+    <p><strong>{member.displayName}</strong>님의 Passport 계정을 삭제합니다.</p>
+    <dl className="delete-member-target">
+      <div><dt>Minecraft</dt><dd>{member.minecraft?.name ?? "연결 없음"}</dd></div>
+      <div><dt>Discord</dt><dd>{member.discordConnection ? `${member.discordConnection.username} · ${member.discordConnection.discordId}` : member.discordId ?? "연결 없음"}</dd></div>
+    </dl>
+    <p className="helper">학교 인증, 로그인 세션과 계정 연결이 삭제되고 게임 접근·Discord 역할이 회수됩니다. 다시 이용하려면 처음부터 인증해야 합니다. 구글시트의 회원 명단은 삭제하지 않습니다.</p>
+    {member.administrator ? <p className="helper warning">이 계정의 관리자 권한도 함께 삭제됩니다.</p> : null}
+    <label className="field-label" htmlFor="delete-member-name">확인을 위해 ‘{member.displayName}’ 입력</label>
+    <input id="delete-member-name" autoComplete="off" value={confirmation} onChange={event => setConfirmation(event.target.value)} disabled={busy || stale} />
+    <label className="check-row"><input type="checkbox" checked={acknowledged} onChange={event => setAcknowledged(event.target.checked)} disabled={busy || stale} /><span>위 계정과 삭제 범위를 확인했습니다.</span></label>
+    {error ? <div role="alert" className="notice notice-error">{error}</div> : null}
+    <div className="dialog-actions"><button onClick={onClose} disabled={busy}>{stale ? "닫고 목록 확인" : "취소"}</button><button className="primary destructive" onClick={() => void remove()} disabled={busy || stale || !acknowledged || confirmation !== member.displayName}>{busy ? "삭제 중…" : "회원 정보 삭제"}</button></div>
+  </Dialog>;
+}
+
+export function MembersView({ csrfToken, servers, onError }: {
+  csrfToken: string; servers: ServerDefinition[]; onError: ReportError;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [queryInput, setQueryInput] = useState("");
+  const [query, setQuery] = useState("");
+  const [membership, setMembership] = useState("all");
+  const [sort, setSort] = useState("name");
+  const [pages, setPages] = useState<string[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [selection, setSelection] = useState<{
-    member: Member;
-    action: "access" | "unlink" | "unlink-discord";
-  } | null>(null);
-  const load = useCallback(
-    async (nextCursor?: string, signal?: AbortSignal) => {
-      setLoading(true);
-      setError("");
-      try {
-        const result = await api<MembersPage>(
-          `/admin/members${nextCursor ? `?cursor=${encodeURIComponent(nextCursor)}` : ""}`,
-          { signal },
-        );
-        if (signal?.aborted) return;
-        setMembers((current) =>
-          nextCursor
-            ? [
-                ...current,
-                ...result.members.filter(
-                  (member) =>
-                    !current.some((existing) => existing.id === member.id),
-                ),
-              ]
-            : result.members,
-        );
-        setCursor(result.nextCursor);
-      } catch (failure) {
-        if (!signal?.aborted) {
-          setError(errorMessage(failure));
-          onError(failure);
-        }
-      } finally {
-        if (!signal?.aborted) setLoading(false);
-      }
-    },
-    [onError],
-  );
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [statsMember, setStatsMember] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{ member: Member; action: "delete" | "unlink" | "unlink-discord" } | null>(null);
+  const requestSequence = useRef(0);
+  const cursor = pages.at(-1);
+  const load = useCallback(async (signal?: AbortSignal) => {
+    const sequence = ++requestSequence.current;
+    setLoading(true); setError(""); setMembers([]); setNextCursor(null); setExpanded(null); setEditing(null); setStatsMember(null);
+    const params = new URLSearchParams({ q: query, membership, sort, limit: "20" });
+    if (cursor) params.set("cursor", cursor);
+    try {
+      const result = await api<MembersPage>(`/admin/members?${params}`, { signal });
+      if (signal?.aborted || sequence !== requestSequence.current) return;
+      setMembers(result.members); setNextCursor(result.nextCursor); setTotal(result.total);
+    } catch (failure) {
+      if (!signal?.aborted && sequence === requestSequence.current) { setError(errorMessage(failure)); onError(failure); }
+    } finally { if (!signal?.aborted && sequence === requestSequence.current) setLoading(false); }
+  }, [query, membership, sort, cursor, onError]);
   useEffect(() => {
-    const controller = new AbortController();
-    void load(undefined, controller.signal);
-    return () => controller.abort();
+    const controller = new AbortController(); void load(controller.signal);
+    return () => { controller.abort(); requestSequence.current++; };
   }, [load]);
   async function saved(message: string) {
-    setSelection(null);
-    setNotice(message);
-    await load();
+    setSelection(null); setEditing(null); setNotice(message); await load();
   }
-  return (
-    <>
-      <div className="section-toolbar">
-        <p className="helper">
-          학교 인증을 완료한 사용자 {members.length}명 조회됨
-          {cursor ? " · 다음 목록 있음" : ""}
-        </p>
-        <button disabled={loading} onClick={() => void load()}>
-          목록 새로고침
+  return <>
+    <form className="member-search" onSubmit={event => { event.preventDefault(); if (query === queryInput.trim() && !pages.length) void load(); else { setQuery(queryInput.trim()); setPages([]); } }}>
+      <label className="sr-only" htmlFor="member-search">회원 통합 검색</label>
+      <input id="member-search" type="search" autoComplete="off" maxLength={128} value={queryInput} onChange={event => setQueryInput(event.target.value)} placeholder="실명, 학번 전체, Minecraft 이름, Discord" />
+      <button className="primary" type="submit" disabled={loading}>검색</button>
+    </form>
+    <div className="member-filters">
+      <div><label htmlFor="membership-filter">회원 구분</label><select id="membership-filter" value={membership} onChange={event => { setMembership(event.target.value); setPages([]); }}>
+        <option value="all">전체 사용자</option><option value="active">소모임 회원만</option><option value="inactive">비회원만</option><option value="suspended">정지 사용자</option>
+      </select></div>
+      <div><label htmlFor="member-sort">정렬</label><select id="member-sort" value={sort} onChange={event => { setSort(event.target.value); setPages([]); }}>
+        <option value="name">이름순</option><option value="newest">최근 등록순</option><option value="oldest">오래된 등록순</option>
+      </select></div>
+      {query || queryInput ? <button type="button" className="text-button" onClick={() => { setQueryInput(""); setQuery(""); setPages([]); }}>검색 초기화</button> : null}
+      <button type="button" className="text-button member-refresh" disabled={loading} onClick={() => void load()}>목록 새로고침</button>
+    </div>
+    <div className="member-list-meta"><span aria-live="polite">{loading ? "목록 확인 중…" : error ? "목록을 확인하지 못했습니다" : `총 ${total}명`}</span><span>행을 누르면 상세 정보와 수정 메뉴가 열립니다.</span></div>
+    {notice ? <div role="status" className="notice notice-success">{notice}</div> : null}
+    {error ? <div role="alert" className="notice notice-error">{error}</div> : null}
+    <section className="panel members-panel compact-members" aria-label="회원 목록" aria-busy={loading}>
+      <div className="member-list-labels" aria-hidden="true"><span>사용자</span><span>회원 구분</span><span>Minecraft</span><span>Discord</span><span /></div>
+      {members.map(member => <article className="member-row" key={member.id}>
+        <button className="member-summary" aria-expanded={expanded === member.id} aria-controls={`member-detail-${member.id}`} onClick={() => { setExpanded(expanded === member.id ? null : member.id); setEditing(null); setStatsMember(null); }}>
+          <span className="member-summary-name"><strong>{member.displayName}</strong><small>{member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</small></span>
+          <span className={`member-kind ${member.accessSuspended || member.membershipStatus === "suspended" ? "member-kind-suspended" : member.membershipStatus === "active" ? "member-kind-active" : ""}`}>{member.accessSuspended ? "접근 정지" : membershipLabel(member.membershipStatus)}</span>
+          <span className="member-summary-minecraft">{member.minecraft?.name ?? "연결 없음"}</span>
+          <span className="member-summary-discord">{member.discordConnection?.displayName || member.discordConnection?.username || (member.discordId ? member.discordId : "연결 없음")}</span>
+          <span className="row-chevron" aria-hidden="true">{expanded === member.id ? "−" : "+"}</span>
         </button>
-      </div>
-      {notice ? (
-        <div role="status" className="notice notice-success">
-          {notice}
-        </div>
-      ) : null}
-      {error ? (
-        <div role="alert" className="notice notice-error">
-          {error}
-        </div>
-      ) : null}
-      <section className="panel members-panel" aria-busy={loading}>
-        {members.length ? (
-          <div className="member-list">
-            {members.map((member) => (
-              <article className="member-record" key={member.id}>
-                <div className="member-record-head">
-                  <div>
-                    <h2>{member.displayName}</h2>
-                    <p>
-                      {member.department || "학과 정보 없음"} ·{" "}
-                      {member.roleLabel || "역할 없음"}
-                    </p>
-                  </div>
-                  <span
-                    className={`member-status ${member.accessSuspended ? "danger-text" : ""}`}
-                  >
-                    {member.accessSuspended
-                      ? "관리자 정지"
-                      : membershipLabel(member.membershipStatus)}
-                  </span>
-                </div>
-                <dl className="member-facts">
-                  <div>
-                    <dt>Minecraft</dt>
-                    <dd>{member.minecraft?.name ?? "연결 없음"}</dd>
-                  </div>
-                  <div>
-                    <dt>Discord</dt>
-                    <dd>
-                      {member.discordConnection ? (
-                        <>
-                          {member.discordConnection.displayName || member.discordConnection.username}
-                          <small>{member.discordConnection.discordId} · 학교 계정 연결 완료</small>
-                          <small>{discordRoleLabels[member.discordConnection.roleStatus]}</small>
-                        </>
-                      ) : member.discordId ? (
-                        <>
-                          {member.discordId}
-                          <small>직접 입력 · 소유권 미확인</small>
-                        </>
-                      ) : (
-                        "연결 없음"
-                      )}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>명부 확인 유효 시점</dt>
-                    <dd>{dateTime(member.verifiedUntil)}</dd>
-                  </div>
-                  <div>
-                    <dt>접근 범위</dt>
-                    <dd>
-                      {member.scopeRestricted
-                        ? member.scopeLimit.length
-                          ? member.scopeLimit
-                              .map(
-                                (id) =>
-                                  servers.find((server) => server.id === id)
-                                    ?.label ?? id,
-                              )
-                              .join(", ")
-                          : "모든 서버 제한"
-                        : "서버 정책 적용"}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="member-actions">
-                  <button
-                    onClick={() => setSelection({ member, action: "access" })}
-                  >
-                    접근 제한 관리
-                  </button>
-                  <button
-                    className="text-button danger"
-                    disabled={!member.minecraft}
-                    onClick={() => setSelection({ member, action: "unlink" })}
-                  >
-                    Minecraft 연결 해제
-                  </button>
-                  <button
-                    className="text-button danger"
-                    disabled={!member.discordConnection && !member.discordId}
-                    onClick={() => setSelection({ member, action: "unlink-discord" })}
-                  >
-                    Discord 연결 해제
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <h3>
-              {loading
-                ? "회원 목록을 불러오고 있어요"
-                : "조회된 회원이 없습니다."}
-            </h3>
-            <p>
-              {loading
-                ? "잠시만 기다려 주세요."
-                : "학교 인증을 완료한 계정이 이곳에 표시됩니다."}
-            </p>
-          </div>
-        )}
-      </section>
-      {cursor ? (
-        <div className="pagination">
-          <button disabled={loading} onClick={() => void load(cursor)}>
-            {loading ? "불러오는 중…" : "회원 더 보기"}
-          </button>
-        </div>
-      ) : null}
-      {selection?.action === "access" ? (
-        <MemberEditor
-          key={selection.member.id}
-          member={selection.member}
-          servers={servers}
-          csrfToken={csrfToken}
-          onClose={() => setSelection(null)}
-          onSaved={saved}
-          onError={onError}
-        />
-      ) : selection?.action === "unlink" || selection?.action === "unlink-discord" ? (
-        <UnlinkDialog
-          key={`${selection.member.id}:${selection.action}`}
-          member={selection.member}
-          provider={selection.action === "unlink" ? "minecraft" : "discord"}
-          csrfToken={csrfToken}
-          onClose={() => setSelection(null)}
-          onSaved={saved}
-          onError={onError}
-        />
-      ) : null}
-    </>
-  );
+        {expanded === member.id ? <div className="member-expanded" id={`member-detail-${member.id}`}>
+          <dl className="member-facts">
+            {member.admissionYear ? <div><dt>입학 학번</dt><dd>{member.admissionYear}학번</dd></div> : null}
+            <div><dt>Minecraft</dt><dd>{member.minecraft?.name ?? "연결 없음"}</dd></div>
+            <div><dt>Discord</dt><dd>{member.discordConnection ? <>{member.discordConnection.username}<small>{member.discordConnection.discordId} · {discordRoleLabels[member.discordConnection.roleStatus]}</small></> : member.discordId ?? "연결 없음"}</dd></div>
+            <div><dt>명부 확인 유효 시점</dt><dd>{dateTime(member.verifiedUntil)}</dd></div>
+            <div><dt>접근 범위</dt><dd>{member.scopeRestricted ? member.scopeLimit.length ? member.scopeLimit.map(id => servers.find(server => server.id === id)?.label ?? id).join(", ") : "모든 서버 제한" : "서버 정책 적용"}</dd></div>
+          </dl>
+          {editing === member.id ? <MemberEditor member={member} servers={servers} csrfToken={csrfToken} onClose={() => setEditing(null)} onSaved={saved} onError={onError} /> : <div className="member-actions">
+            <button onClick={() => setEditing(member.id)}>접근 제한 수정</button>
+            <button onClick={() => setStatsMember(statsMember === member.id ? null : member.id)} aria-expanded={statsMember === member.id}>플레이 기록</button>
+            <button className="text-button" disabled={!member.minecraft} onClick={() => setSelection({ member, action: "unlink" })}>Minecraft 연결 해제</button>
+            <button className="text-button" disabled={!member.discordConnection && !member.discordId} onClick={() => setSelection({ member, action: "unlink-discord" })}>Discord 연결 해제</button>
+            <button className="text-button danger member-delete" onClick={() => setSelection({ member, action: "delete" })}>회원 정보 삭제</button>
+          </div>}
+          {statsMember === member.id ? <div className="member-stats"><StatsView endpoint={`/admin/members/${encodeURIComponent(member.id)}/stats`} title={`${member.displayName}님의 플레이 기록`} onError={onError} /></div> : null}
+        </div> : null}
+      </article>)}
+      {!members.length ? <div className="empty-state"><h3>{loading ? "회원 목록을 불러오고 있어요" : error ? "목록을 다시 불러와 주세요" : query || membership !== "all" ? "조건에 맞는 사용자가 없습니다" : "등록된 사용자가 없습니다"}</h3><p>{loading ? "잠시만 기다려 주세요." : error ? "목록 새로고침으로 다시 시도할 수 있습니다." : "학교 인증을 완료한 사용자가 이곳에 표시됩니다."}</p></div> : null}
+    </section>
+    <div className="pagination member-pagination"><button disabled={loading || !pages.length} onClick={() => setPages(current => current.slice(0, -1))}>이전</button><span>{pages.length + 1} 페이지</span><button disabled={loading || !nextCursor} onClick={() => { if (nextCursor) setPages(current => [...current, nextCursor]); }}>다음</button></div>
+    {selection?.action === "delete" ? <DeleteMemberDialog member={selection.member} csrfToken={csrfToken} onClose={() => setSelection(null)} onSaved={saved} onError={onError} />
+      : selection ? <UnlinkDialog member={selection.member} provider={selection.action === "unlink" ? "minecraft" : "discord"} csrfToken={csrfToken} onClose={() => setSelection(null)} onSaved={saved} onError={onError} /> : null}
+  </>;
 }

@@ -12,7 +12,8 @@
     "check": "tsc --noEmit && npm test",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --experimental-strip-types --test test/discord.test.mjs",
-    "test:browser-discord": "npm run build && node --test test/discord-management.browser.mjs"
+    "test:browser-discord": "npm run build && node --test test/discord-management.browser.mjs",
+    "test:browser-members": "npm run build && node --test test/members-management.browser.mjs"
   },
   "dependencies": {
     "react": "19.3.0",

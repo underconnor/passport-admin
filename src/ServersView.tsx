@@ -95,6 +95,7 @@ export function ServersView({ csrfToken, onError, onChanged }: {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selection, setSelection] = useState<ManagedServer | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const requestSequence = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => {
     const sequence = ++requestSequence.current;
@@ -123,18 +124,25 @@ export function ServersView({ csrfToken, onError, onChanged }: {
     <div className="notice server-discovery-note">새 서버는 접속이 꺼진 상태로 등록됩니다. 서버 설정에서 접속 여부와 접속 대상을 선택해 주세요.</div>
     {notice ? <div role="status" className="notice notice-success">{notice}</div> : null}
     {error ? <div role="alert" className="notice notice-error">{error}</div> : null}
-    <div className="managed-server-grid" aria-busy={loading}>
-      {servers.map(server => <article className="panel managed-server" key={server.id}>
-        <div className="managed-server-heading"><div><h2>{server.label}</h2><small>{server.id}</small></div>
-          <span className={`connection-badge ${server.online ? "online" : "offline"}`}>{server.online ? "응답 중" : server.paperSeenAt ? "응답 없음" : "연결 대기"}</span></div>
-        <dl className="detail-list">
-          <div><dt>접속 정책</dt><dd>{server.enabled ? accessLabels[server.accessMode] : "접속 비활성"}</dd></div>
-          <div><dt>프록시 등록</dt><dd>{server.proxyAvailable ? "확인됨" : "확인되지 않음"}</dd></div>
-          <div><dt>플러그인 최근 응답</dt><dd>{dateTime(server.paperSeenAt)}</dd></div>
-        </dl>
-        <div className="managed-server-footer"><span className="helper">{server.sensitive ? "민감 서버" : "일반 서버"}</span><button onClick={() => setSelection(server)}>접근 및 설정</button></div>
+    <section className="panel compact-server-list" aria-label="서버 목록" aria-busy={loading}>
+      <div className="server-list-labels" aria-hidden="true"><span>서버</span><span>접속 대상</span><span>연결 상태</span><span /></div>
+      {servers.map(server => <article className="compact-server-record" key={server.id}>
+        <button className="server-summary" aria-expanded={expanded === server.id} aria-controls={`server-detail-${server.id}`} onClick={() => setExpanded(expanded === server.id ? null : server.id)}>
+          <span className="server-summary-name"><strong>{server.label}</strong><small>{server.id}</small></span>
+          <span className="server-summary-policy">{server.enabled ? accessLabels[server.accessMode] : "접속 비활성"}</span>
+          <span className={`connection-badge ${server.online ? "online" : "offline"}`}>{server.online ? "응답 중" : server.paperSeenAt ? "응답 없음" : "연결 대기"}</span>
+          <span className="row-chevron" aria-hidden="true">{expanded === server.id ? "−" : "+"}</span>
+        </button>
+        {expanded === server.id ? <div className="server-expanded" id={`server-detail-${server.id}`}>
+          <dl className="member-facts">
+            <div><dt>프록시 등록</dt><dd>{server.proxyAvailable ? "확인됨" : "확인되지 않음"}</dd></div>
+            <div><dt>플러그인 최근 응답</dt><dd>{dateTime(server.paperSeenAt)}</dd></div>
+            <div><dt>서버 구분</dt><dd>{server.sensitive ? "민감 서버" : "일반 서버"}</dd></div>
+          </dl>
+          <div className="member-actions"><button onClick={() => setSelection(server)}>접근 및 설정</button></div>
+        </div> : null}
       </article>)}
-    </div>
+    </section>
     {!loading && !servers.length ? <section className="panel empty-state"><h2>아직 등록된 서버가 없습니다</h2><p>플러그인의 API 주소와 서비스 인증을 설정하면 여기에 표시됩니다.</p></section> : null}
     <p className="helper field-help">응답 상태는 최근 90초 이내 Paper 플러그인의 보고를 기준으로 합니다. 실제 게임 접속 가능 여부와는 다를 수 있습니다.</p>
     {selection ? <ServerEditor key={selection.id} server={selection} csrfToken={csrfToken} onClose={() => setSelection(null)} onError={onError} onSaved={async () => {
