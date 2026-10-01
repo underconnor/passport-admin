@@ -41,11 +41,17 @@ export function AccessGate({
   function enroll(event: FormEvent) {
     event.preventDefault();
     void run("enrollment", async () => {
-      const result = await api<{ secret: string; otpauthUrl: string }>(
+      const result = await api<{ mfaRequired: boolean; secret?: string; otpauthUrl?: string }>(
         "/admin/enrollment",
         { method: "POST", body: { bootstrapToken }, csrfToken: auth.csrfToken },
       );
-      setEnrollment({ secret: result.secret });
+      if (result.mfaRequired) {
+        if (!result.secret) throw new Error("인증 앱 등록 정보를 확인하지 못했습니다.");
+        setEnrollment({ secret: result.secret });
+      } else {
+        setEnrollment(null);
+        await refresh();
+      }
       setBootstrapToken("");
       setReEnroll(false);
     });
@@ -70,8 +76,8 @@ export function AccessGate({
   const pending = admin.enrollmentPending || enrollment !== null;
   const showEnrollmentForm =
     admin.authenticated &&
-    !admin.enrolled &&
-    (!pending || reEnroll) &&
+    (!admin.enrolled || admin.enrollmentPending) &&
+    (!pending || reEnroll || !admin.mfaRequired || (admin.enrolled && admin.enrollmentPending)) &&
     (admin.bootstrapAvailable || admin.enrollmentPending);
   return (
     <section className="panel gate-panel">
@@ -81,14 +87,14 @@ export function AccessGate({
           {!admin.authenticated || requiresSchoolLogin
             ? "학교 로그인 필요"
             : admin.enrolled
-              ? "추가 인증 필요"
+              ? admin.mfaRequired ? "추가 인증 필요" : "권한 확인 중"
               : "등록 확인"}
         </span>
       </div>
       {!admin.authenticated || requiresSchoolLogin ? (
         <div className="access-content">
           <h3>학교 계정으로 로그인해 주세요</h3>
-          <p>학교 로그인 후 운영자 권한과 인증 앱 코드를 확인합니다.</p>
+          <p>학교 로그인 후 등록된 운영자 권한을 확인합니다.</p>
           <button
             className="primary"
             disabled={Boolean(busy) || auth.authMode !== "university"}
@@ -122,7 +128,7 @@ export function AccessGate({
         <>
           <p className="helper gate-intro">
             {admin.displayName}님,{" "}
-            {admin.enrolled
+            {admin.enrolled && admin.mfaRequired && !admin.enrollmentPending
               ? "인증 앱의 6자리 코드를 입력해 주세요. 확인 후 15분 동안 관리 기능을 사용할 수 있습니다."
               : "최초 운영자 등록에는 서버 운영자가 전달한 등록 코드가 필요합니다."}
           </p>
@@ -154,7 +160,7 @@ export function AccessGate({
                     ? "등록 준비 중…"
                     : reEnroll
                       ? "새 등록 키 발급"
-                      : "인증 앱 등록 시작"}
+                      : admin.mfaRequired ? "인증 앱 등록 시작" : "운영자로 등록"}
                 </button>
                 {reEnroll ? (
                   <button
@@ -168,7 +174,7 @@ export function AccessGate({
               </div>
             </form>
           ) : null}
-          {enrollment ? (
+          {admin.mfaRequired && enrollment ? (
             <div className="enrollment-key">
               <h3>인증 앱에 수동으로 등록해 주세요</h3>
               <p className="helper">
@@ -190,7 +196,7 @@ export function AccessGate({
               </p>
             </div>
           ) : null}
-          {(admin.enrolled || pending) && !reEnroll ? (
+          {admin.mfaRequired && (enrollment || (admin.enrolled && !admin.enrollmentPending) || (pending && !admin.enrolled)) && !reEnroll ? (
             <form onSubmit={verify}>
               <label htmlFor="totp-code">인증 앱 코드</label>
               <input

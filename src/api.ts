@@ -4,6 +4,12 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  server_changed: "다른 곳에서 서버 설정이 변경되었습니다. 창을 닫고 상태를 새로고침한 뒤 다시 수정해 주세요.",
+  server_not_found: "서버를 찾지 못했습니다. 목록을 다시 확인해 주세요.",
+  invalid_selected_subjects: "선택한 회원을 확인해 주세요.",
+  invalid_subject_scope: "선택한 회원을 확인해 주세요.",
+  registry_full: "등록 가능한 서버 수를 초과했습니다.",
+  mfa_not_enrolled: "인증 앱 등록이 필요합니다. 등록 코드로 설정을 시작해 주세요.",
   university_provider_not_configured:
     "이 환경은 학교 로그인이 아직 연결되지 않았습니다.",
   university_login_required:

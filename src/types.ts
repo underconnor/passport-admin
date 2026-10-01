@@ -2,13 +2,28 @@ export interface ServerDefinition {
   id: string;
   label: string;
   sensitive?: boolean;
+  enabled?: boolean;
+}
+export interface ManagedServer extends ServerDefinition {
+  enabled: boolean;
+  accessMode: "roster" | "members" | "selected";
+  allowedSubjectIds: string[];
+  paperSeenAt: string | null;
+  proxySeenAt: string | null;
+  online: boolean;
+  proxyAvailable: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 export interface AdminSession {
   authenticated: boolean;
+  schoolVerified: boolean;
   displayName: string | null;
   enrolled: boolean;
   enrollmentPending: boolean;
   bootstrapAvailable: boolean;
+  mfaRequired: boolean;
+  authorized: boolean;
   mfaVerified: boolean;
   mfaVerifiedUntil: string | null;
 }
@@ -34,6 +49,7 @@ export interface Member {
   verifiedUntil: string;
   universityVerifiedUntil: string | null;
   allowedServerIds: string[];
+  eligibleServerIds: string[];
   accessSuspended: boolean;
   scopeRestricted: boolean;
   scopeLimit: string[];

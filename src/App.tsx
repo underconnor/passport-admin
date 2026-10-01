@@ -6,14 +6,16 @@ import type { IconName } from "./ui";
 import { AccessGate } from "./AccessGate";
 import { MembersView } from "./MembersView";
 import { RosterView } from "./RosterView";
+import { ServersView } from "./ServersView";
 import { AuditView } from "./AuditView";
 import { dateTime } from "./types";
 import type { AdminSession, Overview } from "./types";
 
-type View = "overview" | "members" | "roster" | "audit";
+type View = "overview" | "members" | "roster" | "servers" | "audit";
 const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "overview", label: "운영 현황", icon: "dashboard" },
   { id: "members", label: "회원 관리", icon: "check" },
+  { id: "servers", label: "서버 관리", icon: "book" },
   { id: "roster", label: "명부 동기화", icon: "book" },
   { id: "audit", label: "운영 기록", icon: "settings" },
 ];
@@ -51,7 +53,7 @@ export function App() {
       if (signal?.aborted) return;
       setAdmin(access);
       setNow(Date.now());
-      if (access.mfaVerified) {
+      if (access.authorized) {
         const data = await api<Overview>("/admin/overview", { signal });
         if (!signal?.aborted) setOverview(data);
       } else {
@@ -79,12 +81,12 @@ export function App() {
     return () => window.clearInterval(timer);
   }, []);
   useEffect(() => {
-    if (!admin?.mfaVerified || !admin.mfaVerifiedUntil) return;
+    if (!admin?.mfaRequired || !admin.mfaVerified || !admin.mfaVerifiedUntil) return;
     const expiresAt = new Date(admin.mfaVerifiedUntil).getTime();
     const expire = () => {
       if (Date.now() < expiresAt) return;
       setAdmin((current) =>
-        current ? { ...current, mfaVerified: false } : null,
+        current ? { ...current, authorized: false, mfaVerified: false } : null,
       );
       setOverview(null);
       setView("overview");
@@ -101,7 +103,7 @@ export function App() {
       window.clearTimeout(timer);
       window.removeEventListener("focus", expire);
     };
-  }, [admin?.mfaVerified, admin?.mfaVerifiedUntil]);
+  }, [admin?.mfaRequired, admin?.mfaVerified, admin?.mfaVerifiedUntil]);
 
   const authorizationFailure = useCallback(
     (failure: unknown) => {
@@ -153,9 +155,9 @@ export function App() {
   }
   const verified = Boolean(
     !requiresSchoolLogin &&
-    admin?.mfaVerified &&
-    admin.mfaVerifiedUntil &&
-    new Date(admin.mfaVerifiedUntil).getTime() > now,
+    admin?.authorized &&
+    (!admin.mfaRequired || (admin.mfaVerified && admin.mfaVerifiedUntil &&
+      new Date(admin.mfaVerifiedUntil).getTime() > now)),
   );
   const activeNavigation = verified ? navigation : navigation.slice(0, 1);
   const selected = navigation.find((item) => item.id === view)!;
@@ -169,7 +171,7 @@ export function App() {
         setError("");
       }}
       displayName={admin?.displayName ?? "운영자"}
-      description={verified ? "추가 인증 완료" : "권한 확인 필요"}
+      description={verified ? "등록된 운영자" : "권한 확인 필요"}
       development={auth?.authMode === "development"}
       university={auth?.authMode === "university"}
       onLogout={admin?.authenticated ? () => void logout() : undefined}
@@ -184,13 +186,15 @@ export function App() {
                 ? "회원과 서버 접근 정책의 현재 상태를 확인합니다."
                 : view === "members"
                   ? "명부에서 허용된 범위 안에서 회원의 접근을 관리합니다."
+                  : view === "servers"
+                    ? "연결된 서버와 서버별 접속 대상을 관리합니다."
                   : view === "roster"
                     ? "새 명부를 확인한 뒤 회원 정책에 반영합니다."
                     : "관리 작업과 회원 정책 변경을 확인합니다."
-              : "학교 로그인과 인증 앱으로 관리 권한을 확인합니다."}
+              : "학교 계정으로 로그인해 등록된 운영자 권한을 확인합니다."}
           </p>
         </div>
-        <button
+        {!(verified && view === "servers") ? <button
           disabled={loading || busy}
           onClick={() => {
             setError("");
@@ -198,9 +202,9 @@ export function App() {
           }}
         >
           상태 새로고침
-        </button>
+        </button> : null}
       </div>
-      {verified ? (
+      {verified && admin?.mfaRequired ? (
         <div className="mfa-session-info">
           추가 인증 유효 시점: {dateTime(admin?.mfaVerifiedUntil ?? null)}
         </div>
@@ -230,7 +234,7 @@ export function App() {
             await refreshSession();
           }}
           onError={authorizationFailure}
-          requiresSchoolLogin={requiresSchoolLogin}
+          requiresSchoolLogin={requiresSchoolLogin || (admin.authenticated && !admin.schoolVerified)}
         />
       ) : !overview ? (
         <section className="panel empty-state">
@@ -243,6 +247,8 @@ export function App() {
           servers={overview.servers}
           onError={authorizationFailure}
         />
+      ) : view === "servers" ? (
+        <ServersView csrfToken={auth.csrfToken} onError={authorizationFailure} onChanged={refreshOverview} />
       ) : view === "roster" ? (
         <RosterView
           overview={overview}
@@ -320,7 +326,7 @@ export function App() {
             <section className="panel">
               <div className="panel-head">
                 <h2>등록된 서버</h2>
-                <small>{overview.servers.length}개</small>
+                <button className="text-button" onClick={() => setView("servers")}>서버 관리</button>
               </div>
               <ul className="server-list">
                 {overview.servers.map((server) => (
@@ -330,7 +336,7 @@ export function App() {
                       <small>{server.id}</small>
                     </div>
                     <span className="status-label">
-                      {server.sensitive
+                      {server.enabled === false ? "접속 비활성" : server.sensitive
                         ? "접근 시 최신 정책 확인"
                         : "회원 정책 적용"}
                     </span>

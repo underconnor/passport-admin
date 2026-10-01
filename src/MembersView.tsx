@@ -32,7 +32,7 @@ function MemberEditor({
       ? member.scopeLimit.filter((id) =>
           servers.some((server) => server.id === id),
         )
-      : member.allowedServerIds.filter((id) =>
+      : (member.eligibleServerIds ?? member.allowedServerIds).filter((id) =>
           servers.some((server) => server.id === id),
         ),
   );
@@ -67,8 +67,8 @@ function MemberEditor({
       onClose={onClose}
     >
       <p className="helper">
-        운영자는 명부에서 허용한 권한을 정지하거나 더 좁힐 수 있습니다. 명부에
-        없는 서버 권한을 추가하지 않습니다.
+        서버별 접근 정책으로 허용된 범위 안에서 이 회원의 접속을 제한합니다.
+        서버 전체의 허용 대상은 서버 관리에서 변경할 수 있습니다.
       </p>
       <label className="check-row">
         <input
@@ -92,7 +92,7 @@ function MemberEditor({
         <span>
           <strong>접속 가능한 서버 제한</strong>
           <small>
-            선택한 서버와 명부에서 허용한 서버의 공통 범위만 허용합니다.
+            선택한 서버 중 서버별 접근 정책으로 허용된 곳만 접속할 수 있습니다.
           </small>
         </span>
       </label>
@@ -111,14 +111,14 @@ function MemberEditor({
                       : current.filter((id) => id !== server.id),
                   )
                 }
-                disabled={!member.allowedServerIds.includes(server.id)}
+                disabled={!(member.eligibleServerIds ?? member.allowedServerIds).includes(server.id)}
               />
               <span>
                 {server.label}
                 <small>
-                  {member.allowedServerIds.includes(server.id)
-                    ? "명부에서 허용됨"
-                    : "명부 권한 없음"}
+                  {(member.eligibleServerIds ?? member.allowedServerIds).includes(server.id)
+                    ? "서버 정책에서 허용됨"
+                    : "서버 정책 권한 없음"}
                 </small>
               </span>
             </label>
@@ -359,7 +359,7 @@ export function MembersView({
                               )
                               .join(", ")
                           : "모든 서버 제한"
-                        : "명부 권한 적용"}
+                        : "서버 정책 적용"}
                     </dd>
                   </div>
                 </dl>

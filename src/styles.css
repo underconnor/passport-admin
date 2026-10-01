@@ -877,7 +877,7 @@ input:disabled {
   }
   .app-sidebar nav {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
     padding-bottom: 10px;
   }
@@ -1488,3 +1488,18 @@ input:disabled {
     font-size: 11px;
   }
 }
+
+/* Server discovery and access settings share the ALMS v4 spacing and type scale. */
+select { font: inherit; width: 100%; min-height: 42px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); }
+select:focus-visible { outline: 3px solid #9fc4ff; outline-offset: 2px; }
+.field-label { display: block; margin: 18px 0 6px; font-weight: 600; }
+.managed-server-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.managed-server { padding: 22px; min-width: 0; }
+.managed-server-heading { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.managed-server-heading h2 { font-size: 17px; }
+.managed-server-heading small { color: var(--muted); overflow-wrap: anywhere; }
+.connection-badge { flex-shrink: 0; padding: 3px 9px; border-radius: 20px; background: var(--selected); color: var(--muted); font-size: 12px; font-weight: 600; }
+.connection-badge.online { background: #eaf7ef; color: var(--success); }
+.managed-server-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; }
+.server-discovery-note { color: var(--muted); background: var(--surface); border: 1px solid var(--border); }
+@media (max-width: 800px) { .managed-server-grid { grid-template-columns: 1fr; } }
