@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorMessage } from "./api";
 import { Dialog } from "./Dialog";
 import { dateTime } from "./types";
@@ -93,18 +93,28 @@ export function ServersView({ csrfToken, onError, onChanged }: {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selection, setSelection] = useState<ManagedServer | null>(null);
+  const requestSequence = useRef(0);
   const load = useCallback(async (signal?: AbortSignal) => {
+    const sequence = ++requestSequence.current;
     setLoading(true); setError("");
     try {
       const result = await api<{ servers: ManagedServer[] }>("/admin/servers", { signal });
-      if (!signal?.aborted) setServers(result.servers);
-    } catch (failure) { if (!signal?.aborted) { setError(errorMessage(failure)); onError(failure); } }
-    finally { if (!signal?.aborted) setLoading(false); }
+      if (!signal?.aborted && sequence === requestSequence.current) setServers(result.servers);
+    } catch (failure) { if (!signal?.aborted && sequence === requestSequence.current) { setError(errorMessage(failure)); onError(failure); } }
+    finally { if (sequence === requestSequence.current) setLoading(false); }
   }, [onError]);
   useEffect(() => {
     const controller = new AbortController(); void load(controller.signal);
     return () => controller.abort();
   }, [load]);
+  useEffect(() => {
+    if (selection) return;
+    const controller = new AbortController();
+    const refresh = () => { if (document.visibilityState === "visible") void load(controller.signal); };
+    const timer = window.setInterval(refresh, 30_000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { controller.abort(); window.clearInterval(timer); document.removeEventListener("visibilitychange", refresh); };
+  }, [load, selection]);
   return <>
     <div className="section-toolbar"><p className="helper">등록된 서버 {servers.length}개 · 플러그인이 연결되면 자동으로 표시됩니다.</p>
       <button disabled={loading} onClick={() => void load()}>상태 새로고침</button></div>
