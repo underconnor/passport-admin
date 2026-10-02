@@ -12,7 +12,7 @@ export function Icon({ name }: { name: IconName }) {
   return (
     <img
       className="ds-icon"
-      src={`/assets/${name}.svg`}
+      src={`/assets/${name === "brand" ? "brand-verified-passport" : name}.svg`}
       alt=""
       aria-hidden="true"
     />
