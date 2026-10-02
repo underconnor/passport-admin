@@ -23,7 +23,7 @@ export function ManualSettingsView({ csrfToken, canWrite, onError }: { csrfToken
   async function save(event: React.SubmitEvent<HTMLFormElement>) {
     event.preventDefault(); if (!settings || !canWrite || busy || stale) return;
     setBusy(true); setError(""); setNotice("");
-    try { const updated = await api<ManualSettings>("/admin/manual", { method: "PUT", csrfToken, body: { title: title.trim(), notionUrl: url.trim() || null, embedUrl: embed.trim() || null, expectedRevision: settings.revision } }); setSettings(updated); setTitle(updated.title); setUrl(updated.notionUrl ?? ""); setEmbed(updated.embedUrl ?? ""); setNotice(updated.configured ? "매뉴얼을 저장했습니다." : "매뉴얼 등록을 해제했습니다."); }
+    try { const updated = await api<ManualSettings>("/admin/manual", { method: "PUT", csrfToken, body: { title: title.trim(), notionUrl: url.trim() || null, embedUrl: url.trim() ? embed.trim() || null : null, expectedRevision: settings.revision } }); setSettings(updated); setTitle(updated.title); setUrl(updated.notionUrl ?? ""); setEmbed(updated.embedUrl ?? ""); setNotice(updated.configured ? "매뉴얼을 저장했습니다." : "매뉴얼 등록을 해제했습니다."); }
     catch (failure) { if (failure instanceof ApiError && (failure.status === 409 || failure.code === "manual_settings_changed")) setStale(true); setError(errorMessage(failure)); onError(failure); }
     finally { setBusy(false); }
   }
