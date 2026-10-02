@@ -43,6 +43,7 @@ const messages: Record<string, string> = {
   discord_not_configured: "운영 환경의 Discord 봇 설정이 필요합니다.",
   invalid_discord_role: "사용할 수 없는 Discord 역할입니다. 역할 ID와 중복 설정을 확인해 주세요.",
   server_changed: "다른 곳에서 서버 설정이 변경되었습니다. 창을 닫고 상태를 새로고침한 뒤 다시 수정해 주세요.",
+  server_command_conflict: "다른 서버의 이동 명령어 이름이나 내부 ID와 겹칩니다. 다른 이름을 입력해 주세요.",
   server_not_found: "서버를 찾지 못했습니다. 목록을 다시 확인해 주세요.",
   invalid_selected_subjects: "선택한 회원을 확인해 주세요.",
   invalid_subject_scope: "선택한 회원을 확인해 주세요.",

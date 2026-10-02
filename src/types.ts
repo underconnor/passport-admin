@@ -1,6 +1,7 @@
 export interface ServerDefinition {
   id: string;
   label: string;
+  commandName: string;
   sensitive?: boolean;
   enabled?: boolean;
 }
