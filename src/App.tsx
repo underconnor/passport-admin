@@ -8,6 +8,9 @@ import { MembersView } from "./MembersView";
 import { RosterView } from "./RosterView";
 import { ServersView } from "./ServersView";
 import { DiscordBotView } from "./DiscordBotView";
+import { ServiceCredentialsView } from "./ServiceCredentialsView";
+import { ObservabilityView } from "./ObservabilityView";
+import { ManualSettingsView } from "./ManualSettingsView";
 import { StatsView } from "./StatsView";
 import { OperatorsView } from "./OperatorsView";
 import { roleLabel } from "./operators";
@@ -15,7 +18,7 @@ import { AuditView } from "./AuditView";
 import { dateTime } from "./types";
 import type { AdminSession, Overview } from "./types";
 
-type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats" | "operators";
+type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats" | "operators" | "manual" | "observability" | "credentials";
 const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "overview", label: "운영 현황", icon: "dashboard" },
   { id: "members", label: "회원 관리", icon: "check" },
@@ -24,6 +27,9 @@ const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "discord", label: "Discord 봇", icon: "settings" },
   { id: "stats", label: "플레이 통계", icon: "dashboard" },
   { id: "operators", label: "운영자 관리", icon: "check" },
+  { id: "credentials", label: "서비스 연결 키", icon: "settings" },
+  { id: "observability", label: "상태 감시", icon: "dashboard" },
+  { id: "manual", label: "매뉴얼 관리", icon: "book" },
   { id: "audit", label: "운영 기록", icon: "settings" },
 ];
 const callbackParams = new URLSearchParams(window.location.search);
@@ -64,7 +70,7 @@ export function App() {
       setAdmin(access);
       setNow(Date.now());
       if (access.authorized) {
-        if (!access.permissions?.manageOperators) setView(current => current === "operators" ? "overview" : current);
+        if (!access.permissions?.manageOperators) setView(current => (current === "operators" || current === "credentials") ? "overview" : current);
         const data = await api<Overview>("/admin/overview", { signal });
         if (!obsolete()) setOverview(data);
       } else {
@@ -186,7 +192,7 @@ export function App() {
   const canWrite = verified && admin?.permissions?.write === true;
   const manageOperators = verified && admin?.permissions?.manageOperators === true;
   const accessKey = `${admin?.subjectId}:${admin?.role}:${canWrite}:${manageOperators}`;
-  const activeNavigation = verified ? navigation.filter(item => item.id !== "operators" || manageOperators) : navigation.slice(0, 1);
+  const activeNavigation = verified ? navigation.filter(item => (item.id !== "operators" && item.id !== "credentials") || manageOperators) : navigation.slice(0, 1);
   const selected = navigation.find((item) => item.id === view)!;
   return (
     <AppShell
@@ -218,6 +224,9 @@ export function App() {
                   : view === "discord"
                     ? "학교·회원·학기 역할과 서버 닉네임 동기화를 관리합니다."
                   : view === "operators" ? "운영자를 초대하고 역할과 접근 권한을 관리합니다."
+                  : view === "credentials" ? "서비스별 권한과 유효기간을 정하고 연결 키를 관리합니다."
+                  : view === "observability" ? "인증과 정책 처리, 회원 명부의 상태를 확인합니다."
+                  : view === "manual" ? "회원 포털에 표시할 Notion 이용 안내를 등록합니다."
                   : view === "stats" ? "전체 사용자와 서버별 플레이 기록을 확인합니다."
                   : view === "roster"
                     ? "새 명부를 확인한 뒤 회원 정책에 반영합니다."
@@ -225,7 +234,7 @@ export function App() {
               : "학교 계정으로 로그인해 등록된 운영자 권한을 확인합니다."}
           </p>
         </div>
-        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members" || view === "operators")) ? <button
+        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members" || view === "operators" || view === "manual" || view === "observability" || view === "credentials")) ? <button
           disabled={loading || busy}
           onClick={() => {
             setError("");
@@ -295,6 +304,12 @@ export function App() {
         />
       ) : view === "stats" ? (
         <StatsView key={accessKey} csrfToken={auth.csrfToken} canWrite={canWrite} endpoint="/admin/stats" title="주요 지표" onError={authorizationFailure} />
+      ) : view === "credentials" && manageOperators ? (
+        <ServiceCredentialsView key={accessKey} csrfToken={auth.csrfToken} servers={overview.servers} onError={authorizationFailure} />
+      ) : view === "observability" ? (
+        <ObservabilityView key={accessKey} onError={authorizationFailure} />
+      ) : view === "manual" ? (
+        <ManualSettingsView key={accessKey} csrfToken={auth.csrfToken} canWrite={canWrite} onError={authorizationFailure} />
       ) : view === "audit" ? (
         <AuditView onError={authorizationFailure} />
       ) : (

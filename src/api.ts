@@ -4,6 +4,15 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  credential_expiry_invalid: "연결 키의 유효기간을 1일에서 365일 사이로 선택해 주세요.",
+  credential_limit: "사용 가능한 연결 키가 너무 많습니다. 사용하지 않는 키를 회수해 주세요.",
+  credential_not_found: "연결 키를 찾지 못했습니다. 목록을 새로고침해 주세요.",
+  manual_settings_changed: "다른 운영자가 매뉴얼을 변경했습니다. 최신 설정을 불러온 뒤 다시 저장해 주세요.",
+  invalid_manual: "문서 제목과 공개된 Notion 주소를 확인해 주세요.",
+  statistics_export_busy: "다른 엑셀 파일을 준비하고 있습니다. 잠시 후 다시 시도해 주세요.",
+  statistics_server_not_available: "선택한 서버의 통계 수집이 중지되었습니다. 기록을 새로고침해 주세요.",
+  statistics_export_too_large: "다운로드 범위가 큽니다. 서버나 회원을 선택해 범위를 좁혀 주세요.",
+  invalid_statistics_period: "시작일과 종료일을 366일 이내로 선택해 주세요.",
   statistics_settings_changed: "다른 곳에서 수집 설정이 변경되었습니다. 최신 설정을 확인한 뒤 다시 시도해 주세요.",
   statistics_reset_changed: "초기화 대상의 연결 또는 기록 상태가 변경되었습니다. 영향을 다시 확인해 주세요.",
   statistics_reset_too_large: "초기화 범위가 너무 큽니다. 서버나 회원을 선택해 범위를 좁혀 주세요.",
@@ -142,9 +151,11 @@ export async function api<T>(
     body?: unknown;
     csrfToken?: string;
     signal?: AbortSignal;
+    responseType?: "blob";
+    timeoutMs?: number;
   } = {},
 ): Promise<T> {
-  const headers = new Headers({ Accept: "application/json" });
+  const headers = new Headers({ Accept: options.responseType === "blob" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "application/json" });
   if (options.body !== undefined)
     headers.set("Content-Type", "application/json");
   if (options.csrfToken) headers.set("X-CSRF-Token", options.csrfToken);
@@ -158,8 +169,8 @@ export async function api<T>(
       body:
         options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: options.signal
-        ? AbortSignal.any([options.signal, AbortSignal.timeout(15_000)])
-        : AbortSignal.timeout(15_000),
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(options.timeoutMs ?? 15_000)])
+        : AbortSignal.timeout(options.timeoutMs ?? 15_000),
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError")
@@ -177,6 +188,10 @@ export async function api<T>(
     throw new ApiError(response.status, code, payload);
   }
   if (response.status === 204) return undefined as T;
+  if (options.responseType === "blob") {
+    if (!response.headers.get("Content-Type")?.startsWith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) throw new Error("엑셀 파일을 확인하지 못했습니다. 다시 시도해 주세요.");
+    return response.blob() as Promise<T>;
+  }
   return response.json() as Promise<T>;
 }
 
