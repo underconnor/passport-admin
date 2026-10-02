@@ -1598,9 +1598,9 @@ button.member-summary:hover, button.member-summary[aria-expanded=true] { backgro
 .stats-toolbar h2 { font-size: 18px; font-weight: 650; }
 .stats-toolbar p { color: var(--muted); font-size: 12px; margin-top: 5px; }
 .stats-toolbar button { flex-shrink: 0; }
-.stats-scope { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
-.stats-scope label { color: var(--muted); font-size: 12px; }
-.stats-scope select { min-width: 180px; width: auto; padding: 10px 34px 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
+.stats-scope, .stats-membership { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.stats-scope label, .stats-membership label { color: var(--muted); font-size: 12px; }
+.stats-scope select, .stats-membership select { min-width: 180px; width: auto; padding: 10px 34px 10px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font: inherit; }
 .stats-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
 .stats-metric { display: flex; flex-direction: column; padding: 22px; min-width: 0; }
 .stats-metric > span { color: var(--muted); font-size: 13px; }

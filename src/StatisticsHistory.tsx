@@ -8,9 +8,9 @@ export function PeriodFilter({ value, disabled, onChange }: { value: StatisticsP
   const [from, setFrom] = useState(value?.from ?? "");
   const [to, setTo] = useState(value?.to ?? "");
   const [error, setError] = useState("");
-  return <form className="stats-period" onSubmit={event => { event.preventDefault(); const days = (Date.parse(to) - Date.parse(from)) / 86400000 + 1; if (!from || !to || !Number.isFinite(days) || days < 1 || days > 366) { setError("시작일부터 종료일까지 366일 이내로 선택해 주세요."); return; } setError(""); onChange({ from, to }); }}>
-    <div><label htmlFor={`${id}-from`}>시작일</label><input id={`${id}-from`} type="date" value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></div>
-    <div><label htmlFor={`${id}-to`}>종료일</label><input id={`${id}-to`} type="date" value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></div>
+  return <form className="stats-period" onSubmit={event => { event.preventDefault(); if (disabled) return; const days = (Date.parse(to) - Date.parse(from)) / 86400000 + 1; if (!from || !to || !Number.isFinite(days) || days < 1 || days > 366) { setError("시작일부터 종료일까지 366일 이내로 선택해 주세요."); return; } setError(""); onChange({ from, to }); }}>
+    <div><label htmlFor={`${id}-from`}>시작일</label><input id={`${id}-from`} type="date" disabled={disabled} value={from} max={to || undefined} onChange={event => setFrom(event.target.value)} /></div>
+    <div><label htmlFor={`${id}-to`}>종료일</label><input id={`${id}-to`} type="date" disabled={disabled} value={to} min={from || undefined} onChange={event => setTo(event.target.value)} /></div>
     <button disabled={disabled || !from || !to} type="submit">기간 조회</button><button disabled={disabled || !value} type="button" onClick={() => { setFrom(""); setTo(""); setError(""); onChange(null); }}>전체 기간</button>
     {error ? <p className="error-text" role="alert">{error}</p> : null}
   </form>;
