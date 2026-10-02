@@ -5,6 +5,7 @@
 - `AccessGate.tsx`: 학교 로그인 시작, 최초 등록, 인증 앱 코드 확인
 - `MembersView.tsx`: 통합 검색·회원 구분·정렬·커서 페이지 목록, 행 확장과 접근 제한 수정, 계정 해제·회원 삭제 확인
 - `ServersView.tsx`: 서버 표시 이름·이동 명령어 이름·접속 대상·수집 설정, 불변 내부 ID와 revision 보존
+- `ServerMemberPicker.tsx`: 검색 대기 기본값, 250ms 검색 debounce, 검색/선택 목록별 10명 페이지, 요청 취소·세대 검사, 미확인 선택 ID 보존
 - `server-settings.ts`: 이동 명령어 이름의 NFC·소문자 정규화와 형식·다른 서버 충돌 검사
 - `RosterView.tsx`: 명부 미리보기와 검토한 내용 반영
 - `AuditView.tsx`: 최근 운영 기록

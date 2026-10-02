@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api, errorMessage } from "./api";
 import { Dialog } from "./Dialog";
 import { dateTime } from "./types";
-import type { ManagedServer, Member, MembersPage, ReportError } from "./types";
+import type { ManagedServer, ReportError } from "./types";
 import { normalizeServerCommandName, serverCommandNameError } from "./server-settings";
+import { ServerMemberPicker } from "./ServerMemberPicker";
 
-const accessLabels = { roster: "명부 권한", members: "소모임 회원 전체", selected: "선택한 소모임 회원", university: "학교 인증 사용자 전체" };
+const accessLabels = { roster: "명부 기본 권한", members: "소모임 회원 전체", selected: "선택한 회원", university: "학교 인증 사용자 전체" };
+const discordLabels = { any: "무관", linked: "연동한 사용자만", unlinked: "연동하지 않은 사용자만" };
 
 function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }: {
   server: ManagedServer; servers: ManagedServer[]; csrfToken: string; onClose: () => void;
@@ -20,29 +22,12 @@ function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }:
   const [statisticsEnabled, setStatisticsEnabled] = useState(server.statisticsEnabled);
   const [sensitive, setSensitive] = useState(Boolean(server.sensitive));
   const [accessMode, setAccessMode] = useState(server.accessMode);
+  const supportsDiscordRequirement = ["any", "linked", "unlinked"].includes(server.discordRequirement);
+  const [discordRequirement, setDiscordRequirement] = useState(server.discordRequirement ?? "any");
   // Preserve selected members outside the loaded page when changing a setting.
   const [selected, setSelected] = useState(server.allowedSubjectIds);
-  const [members, setMembers] = useState<Member[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const loadMembers = useCallback(async (next?: string, signal?: AbortSignal) => {
-    setLoading(true);
-    try {
-      const result = await api<MembersPage>(`/admin/members${next ? `?cursor=${encodeURIComponent(next)}` : ""}`, { signal });
-      if (signal?.aborted) return;
-      setMembers(current => next ? [...current, ...result.members.filter(m => !current.some(old => old.id === m.id))] : result.members);
-      setCursor(result.nextCursor);
-    } catch (failure) {
-      if (!signal?.aborted) { setError(errorMessage(failure)); onError(failure); }
-    } finally { if (!signal?.aborted) setLoading(false); }
-  }, [onError]);
-  useEffect(() => {
-    const controller = new AbortController();
-    void loadMembers(undefined, controller.signal);
-    return () => controller.abort();
-  }, [loadMembers]);
   async function save() {
     if (busy) return;
     const invalidCommand = supportsCommandName ? serverCommandNameError(commandName, server.id, servers) : null;
@@ -53,6 +38,7 @@ function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }:
       await api(`/admin/servers/${encodeURIComponent(server.id)}`, {
         method: "PUT", csrfToken,
         body: { label: label.trim(), ...(supportsCommandName ? { commandName: normalizeServerCommandName(commandName) } : {}), enabled, sensitive, accessMode,
+          ...(supportsDiscordRequirement ? { discordRequirement: accessMode === "university" ? discordRequirement : "any" } : {}),
           ...(statisticsEnabled === undefined ? {} : { statisticsEnabled }),
           allowedSubjectIds: accessMode === "selected" ? selected : [], expectedUpdatedAt: server.updatedAt },
       });
@@ -81,24 +67,26 @@ function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }:
     </label>
     <label className="field-label" htmlFor="server-access">접속 대상</label>
     <select id="server-access" value={accessMode} onChange={e => setAccessMode(e.target.value as ManagedServer["accessMode"])} disabled={busy}>
-      <option value="roster">명부에 이 서버 권한이 있는 회원</option>
+      <option value="roster">명부 기본 권한</option>
       <option value="members">소모임 회원 전체</option>
-      <option value="selected">선택한 소모임 회원만</option>
+      <option value="selected">선택한 회원만</option>
       <option value="university">학교 인증 사용자 전체 · 비회원 포함</option>
     </select>
-    <p className="helper field-help">유효한 학교 인증과 개인별 접근 제한은 모든 방식에 적용됩니다. 소모임 회원 대상 서버는 유효한 회원 명부도 확인합니다.</p>
+    <p className="helper field-help">모든 방식에 유효한 학교 인증과 개인별 접근 제한이 적용됩니다.</p>
     {accessMode === "members" ? <p className="helper warning">이 서버를 활성화하면 명부에 별도 서버 권한이 없어도 활성 회원이 접속할 수 있습니다.</p> : null}
-    {accessMode === "university" ? <p className="helper warning">학교 인증을 완료한 사용자는 소모임 회원이 아니어도 접속할 수 있습니다. 이용 정지와 개인별 서버 제한은 계속 적용됩니다.</p> : null}
-    {accessMode === "selected" ? <fieldset className="server-scope" disabled={busy}>
-      <legend>허용할 회원 · {selected.length}명 선택</legend>
-      {members.map(member => <label className="check-row" key={member.id}>
-        <input type="checkbox" checked={selected.includes(member.id)} onChange={e => setSelected(ids => e.target.checked ? [...ids, member.id] : ids.filter(id => id !== member.id))} />
-        <span>{member.displayName}<small>{member.department || "학과 정보 없음"} · {member.minecraft?.name || "게임 연결 전"}</small></span>
-      </label>)}
-      {loading ? <p className="helper">회원 목록을 불러오는 중…</p> : !members.length ? <p className="helper">학교 로그인한 회원이 없습니다.</p> : null}
-      {cursor ? <button type="button" disabled={loading} onClick={() => void loadMembers(cursor)}>회원 더 보기</button> : null}
-      {!selected.length ? <p className="helper warning">선택한 회원이 없어 모든 회원의 접속이 제한됩니다.</p> : null}
-    </fieldset> : null}
+    {accessMode === "roster" ? <p className="helper field-help">명부 동기화로 부여된 서버 권한을 따릅니다.</p> : null}
+    {accessMode === "selected" ? <p className="helper field-help">학교 인증 사용자 중 선택한 회원만 접속할 수 있습니다.</p> : null}
+    {accessMode === "university" ? <p className="helper warning">소모임 회원이 아닌 학교 인증 사용자도 접속할 수 있습니다.</p> : null}
+    {accessMode === "university" ? <>
+      <label className="field-label" htmlFor="server-discord-requirement">Discord 연동 조건</label>
+      <select id="server-discord-requirement" value={discordRequirement} disabled={busy || !supportsDiscordRequirement}
+        aria-describedby="server-discord-help" onChange={event => setDiscordRequirement(event.target.value as ManagedServer["discordRequirement"])}>
+        {Object.entries(discordLabels).map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+      </select>
+      <p id="server-discord-help" className="helper field-help">{supportsDiscordRequirement ? "학교 인증 사용자 중 Passport에 Discord 계정을 연동했는지에 따라 접속을 허용합니다." : "Discord 연동 조건 설정을 준비 중입니다. 다른 서버 설정은 저장할 수 있습니다."}</p>
+    </> : null}
+    {accessMode === "selected" ? <ServerMemberPicker selected={selected} disabled={busy} onError={onError}
+      onToggle={(id, checked) => setSelected(ids => checked ? ids.includes(id) ? ids : [...ids, id] : ids.filter(value => value !== id))} /> : null}
     {statisticsEnabled !== undefined ? <label className="check-row server-statistics-setting">
       <input type="checkbox" checked={statisticsEnabled} onChange={event => setStatisticsEnabled(event.target.checked)} disabled={busy} />
       <span><strong>이 서버 통계 수집</strong><small>끄면 새 기록 수집과 전체 합계 표시를 중지합니다. 기존 기록은 보관하며 유효한 개인정보 동의를 받은 사용자의 기록만 수집합니다.</small></span>
@@ -168,6 +156,7 @@ export function ServersView({ csrfToken, onError, onChanged, canWrite }: {
             <div><dt>플러그인 최근 응답</dt><dd>{dateTime(server.paperSeenAt)}</dd></div>
             <div><dt>통계 수집</dt><dd>{server.statisticsEnabled === true ? "켜짐" : server.statisticsEnabled === false ? "꺼짐 · 합계 제외" : "확인 필요"}</dd></div>
             <div><dt>서버 구분</dt><dd>{server.sensitive ? "민감 서버" : "일반 서버"}</dd></div>
+            {server.accessMode === "university" ? <div><dt>Discord 연동 조건</dt><dd>{discordLabels[server.discordRequirement] ?? "확인 필요"}</dd></div> : null}
           </dl>
           {canWrite ? <div className="member-actions"><button onClick={() => setSelection(server)}>접근 및 설정</button></div> : null}
         </div> : null}

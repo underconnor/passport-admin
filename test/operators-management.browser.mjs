@@ -27,7 +27,7 @@ const server = http.createServer(async(req,res)=>{
   if(p==='/v1/admin/overview')return json(200,{subjects:3,linked:1,suspended:0,snapshot:null,sync:{enabled:false,running:false,lastSuccessAt:null,lastError:null},servers:[{id:'fixture',label:'합성 서버',commandName:'합성'}]});
   if(p==='/v1/admin/operators'&&req.method==='GET')return state.role==='owner'?json(200,{operators:state.operators,invitations:state.invitations}):json(403,{code:'owner_required'});
   if(p==='/v1/admin/members'&&req.method==='GET'){const result={members:state.rows,total:state.rows.length,nextCursor:null};if(state.holdSearch){state.holdSearch=false;state.release=()=>json(200,result);return;}return json(200,result);}
-  if(p==='/v1/admin/servers'&&req.method==='GET')return json(200,{servers:[{id:'fixture',label:'합성 서버',commandName:'합성',enabled:true,sensitive:false,accessMode:'members',allowedSubjectIds:[],paperSeenAt:future,proxySeenAt:future,online:true,proxyAvailable:true,createdAt:old,updatedAt:old}]});
+  if(p==='/v1/admin/servers'&&req.method==='GET')return json(200,{servers:[{id:'fixture',label:'합성 서버',commandName:'합성',enabled:true,sensitive:false,accessMode:'members',discordRequirement:'any',allowedSubjectIds:[],paperSeenAt:future,proxySeenAt:future,online:true,proxyAvailable:true,createdAt:old,updatedAt:old}]});
   if(p==='/v1/admin/discord'&&req.method==='GET')return json(200,{configured:true,settings,status:{linked:1,roles:{pending:0,failed:0},nicknames:{pending:0,failed:0}}});
   if(p.startsWith('/v1/')&&req.method!=='GET'){
     let content='';for await (const chunk of req)content+=chunk;const input=content?JSON.parse(content):{};

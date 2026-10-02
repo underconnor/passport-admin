@@ -11,7 +11,7 @@ const output=fileURLToPath(new URL('../output/playwright/',import.meta.url));
 const counters={playSeconds:7320,blocksBroken:12,blocksPlaced:4,damageTakenMilli:125500,deaths:2,mobKills:4,playerKills:1,distanceCm:456700};
 const future=new Date(Date.now()+86400000).toISOString();
 const subjectId='00000000-0000-4000-8000-000000000001';
-const serverRecord=(id,label,statisticsEnabled)=>({id,label,commandName:id==='lobby'?'로비':id==='survival'?'야생':id,statisticsEnabled,enabled:true,sensitive:false,accessMode:'members',allowedSubjectIds:[],updatedAt:'2026-10-02T00:00:00.000Z',createdAt:'2026-10-01T00:00:00.000Z',online:true,proxyAvailable:true,paperSeenAt:future});
+const serverRecord=(id,label,statisticsEnabled)=>({id,label,commandName:id==='lobby'?'로비':id==='survival'?'야생':id,statisticsEnabled,enabled:true,sensitive:false,accessMode:'members',discordRequirement:'any',allowedSubjectIds:[],updatedAt:'2026-10-02T00:00:00.000Z',createdAt:'2026-10-01T00:00:00.000Z',online:true,proxyAvailable:true,paperSeenAt:future});
 let state;
 const reset=()=>{state={role:'owner',servers:[serverRecord('lobby','합성 로비',false),serverRecord('survival','합성 야생',true)],writes:[],previews:[],revision:1,resetError:null,serverError:null,cleared:false,exports:[],queries:[],queryPaths:[],membershipFixtures:false,holdStats:false,releaseStats:null,holdExport:false,releaseExport:null,manual:{title:'이용 안내',notionUrl:null,embedUrl:null,configured:false,updatedAt:null,revision:0},manualWrites:[],manualConflict:false,credentials:[],credentialWrites:[]};};
 const server=http.createServer(async(req,res)=>{
@@ -68,7 +68,7 @@ test('statistics collection and reset controls respect scope, retained history, 
    await browser('fill','#server-label','합성 약탈 월드');await browser('fill','#server-command-name','약탈'.normalize('NFD'));await until('document.querySelector(".server-command-preview code").textContent==="/서버 약탈"');
    await mkdir(output,{recursive:true});await browser('set','viewport','1440','1000');await browser('screenshot',path.join(output,'server-command-desktop.png'));await browser('set','viewport','390','844');assert.equal(await inspect('document.documentElement.scrollWidth<=innerWidth'),true);await browser('screenshot',path.join(output,'server-command-mobile.png'));
    await click('설정 저장');await until('document.querySelector(".admin-dialog")===null');assert.equal(state.writes.length,1);
-   assert.deepEqual(state.writes[0],{p:'/v1/admin/servers/lobby',input:{label:'합성 약탈 월드',commandName:'약탈',enabled:true,sensitive:false,accessMode:'selected',statisticsEnabled:false,allowedSubjectIds:[subjectId,'00000000-0000-4000-8000-000000000099'],expectedUpdatedAt:'2026-10-02T00:00:00.000Z'},csrf:'synthetic-csrf'});
+   assert.deepEqual(state.writes[0],{p:'/v1/admin/servers/lobby',input:{label:'합성 약탈 월드',commandName:'약탈',enabled:true,sensitive:false,accessMode:'selected',discordRequirement:'any',statisticsEnabled:false,allowedSubjectIds:[subjectId,'00000000-0000-4000-8000-000000000099'],expectedUpdatedAt:'2026-10-02T00:00:00.000Z'},csrf:'synthetic-csrf'});
    assert.equal(state.servers[0].id,'lobby');assert.equal(await inspect('document.querySelector(".server-summary-name strong").textContent'),'합성 약탈 월드');assert.equal(await inspect('document.querySelector(".server-command").textContent'),'/서버 약탈');assert.equal(state.cleared,false);
   });
   await scenario('server command validation blocks ambiguous input and local collisions then surfaces authoritative conflicts without changing ID',async()=>{

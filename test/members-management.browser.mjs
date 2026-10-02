@@ -20,7 +20,7 @@ const server = http.createServer(async (req, res) => {
   if (url.pathname === '/v1/auth/session') return json(200, {authenticated:true,authMode:'university',csrfToken:'synthetic-admin-csrf'});
   if (url.pathname === '/v1/admin/session') return json(200, {authenticated:true,schoolVerified:true,subjectId:"fixture-owner",role:"owner",permissions:{read:true,write:true,manageOperators:true},displayName:'합성 운영자',enrolled:true,enrollmentPending:false,bootstrapAvailable:false,mfaRequired:false,authorized:state.authorized,mfaVerified:false,mfaVerifiedUntil:null});
   if (url.pathname === '/v1/admin/overview') return json(200, {subjects:25,linked:25,suspended:0,snapshot:null,sync:{enabled:false,running:false,lastSuccessAt:null,lastError:null},servers:[{id:'fixture',label:'합성 서버',commandName:'합성'}]});
-  if (url.pathname === '/v1/admin/servers') return json(200, {servers:[{id:'fixture',label:'합성 서버',commandName:'합성',enabled:true,sensitive:false,accessMode:'members',allowedSubjectIds:[],paperSeenAt:future,proxySeenAt:future,online:true,proxyAvailable:true,createdAt:future,updatedAt:future}]});
+  if (url.pathname === '/v1/admin/servers') return json(200, {servers:[{id:'fixture',label:'합성 서버',commandName:'합성',enabled:true,sensitive:false,accessMode:'members',discordRequirement:'any',allowedSubjectIds:[],paperSeenAt:future,proxySeenAt:future,online:true,proxyAvailable:true,createdAt:future,updatedAt:future}]});
   if (url.pathname === '/v1/admin/members') {
     if (!state.authorized) return json(403, {code:'admin_required'});
     state.reads.push(Object.fromEntries(url.searchParams));
