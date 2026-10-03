@@ -6,9 +6,9 @@ import type { ManagedServer, ReportError } from "./types";
 import { normalizeServerCommandName, serverCommandNameError } from "./server-settings";
 import { ServerMemberPicker } from "./ServerMemberPicker";
 
-const accessLabels = { members: "소모임 회원 전체", selected: "선택한 회원", university: "학교 인증 사용자 전체" };
+const accessLabels = { members: "소모임 회원 전체", staff: "소모임 운영진만", selected: "선택한 회원", university: "학교 인증 사용자 전체" };
 const discordLabels = { any: "무관", linked: "연동한 사용자만", unlinked: "연동하지 않은 사용자만" };
-// Accept older API responses at the boundary; edits always use the current three modes.
+// Accept older API responses at the boundary; edits always use the current modes.
 type ManagedServerResponse = Omit<ManagedServer, "accessMode"> & { accessMode: ManagedServer["accessMode"] | "roster" };
 
 function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }: {
@@ -70,11 +70,13 @@ function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }:
     <label className="field-label" htmlFor="server-access">접속 대상</label>
     <select id="server-access" value={accessMode} onChange={e => setAccessMode(e.target.value as ManagedServer["accessMode"])} disabled={busy}>
       <option value="members">소모임 회원 전체</option>
+      <option value="staff">소모임 운영진만</option>
       <option value="selected">선택한 회원만</option>
       <option value="university">학교 인증 사용자 전체 · 비회원 포함</option>
     </select>
     <p className="helper field-help">모든 방식에 유효한 학교 인증과 개인별 접근 제한이 적용됩니다.</p>
     {accessMode === "members" ? <p className="helper field-help">현재 소모임 회원 모두 접속할 수 있습니다.</p> : null}
+    {accessMode === "staff" ? <p className="helper field-help">운영자 관리에 등록된 총괄 운영자·운영자만 접속할 수 있습니다. 조회 전용 역할은 제외됩니다.</p> : null}
     {accessMode === "selected" ? <p className="helper field-help">학교 인증 사용자 중 선택한 회원만 접속할 수 있습니다.</p> : null}
     {accessMode === "university" ? <p className="helper warning">소모임 회원이 아닌 학교 인증 사용자도 접속할 수 있습니다.</p> : null}
     {accessMode === "university" ? <>

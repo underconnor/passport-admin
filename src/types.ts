@@ -8,7 +8,7 @@ export interface ServerDefinition {
 export interface ManagedServer extends ServerDefinition {
   statisticsEnabled?: boolean;
   enabled: boolean;
-  accessMode: "members" | "selected" | "university";
+  accessMode: "members" | "staff" | "selected" | "university";
   discordRequirement: "any" | "linked" | "unlinked";
   allowedSubjectIds: string[];
   paperSeenAt: string | null;
