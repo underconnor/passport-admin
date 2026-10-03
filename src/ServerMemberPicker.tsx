@@ -87,9 +87,9 @@ export function ServerMemberPicker({ selected, onToggle, disabled, onError }: {
       <div className="server-picker-results" aria-busy={loading}>
         {rows.map(row => <label className="check-row" key={row.id}>
           <input type="checkbox" value={row.id} checked={selected.includes(row.id)} onChange={event => onToggle(row.id, event.target.checked)} />
-          <span><strong>{row.member?.displayName ?? (loading ? "회원 정보 확인 중…" : "회원 정보를 확인할 수 없습니다")}</strong>
-            {row.member ? <><small>{row.member.studentId || "학번 정보 없음"} · {row.member.department || "학과 정보 없음"}</small>
-              <small>{row.member.minecraft?.name || "게임 연결 전"} · {row.member.discordConnection?.displayName || row.member.discordConnection?.username || "Discord 연결 전"}</small></>
+          <span><strong>{row.member?.displayName ?? (loading ? "회원 정보 확인 중…" : "회원 정보를 확인할 수 없습니다")}{row.member?.identityProvider === "managed-development" ? <span className="development-badge">개발</span> : null}</strong>
+            {row.member ? <><small>{row.member.identityProvider === "managed-development" ? "학교 계정 없음 · 테스트 설정 적용" : <>{row.member.studentId || "학번 정보 없음"} · {row.member.department || "학과 정보 없음"}</>}</small>
+              <small>{row.member.minecraft?.name || "게임 연결 전"} · {row.member.identityProvider === "managed-development" ? row.member.developmentAccount?.discordLinked ? "Discord 연동 가정" : "Discord 미연동 가정" : row.member.discordConnection?.displayName || row.member.discordConnection?.username || "Discord 연결 전"}</small></>
               : <small className="server-picker-unresolved">{row.id} · 선택 유지</small>}
           </span>
         </label>)}

@@ -4,6 +4,12 @@ export interface AuthSession {
   authMode: "development" | "university-disabled" | "university";
 }
 const messages: Record<string, string> = {
+  minecraft_profile_not_found: "해당 Minecraft 프로필을 찾지 못했습니다. 게임 닉네임을 확인해 주세요.",
+  minecraft_profile_unavailable: "Mojang 프로필을 확인하지 못했습니다. 잠시 후 다시 등록해 주세요.",
+  development_account_changed: "다른 곳에서 개발 계정이 변경되었습니다. 최신 목록을 불러왔으니 다시 확인해 주세요.",
+  development_account_not_found: "이미 삭제되었거나 찾을 수 없는 개발 계정입니다. 최신 목록을 확인해 주세요.",
+  development_account_limit: "개발 계정은 최대 100개까지 등록할 수 있습니다. 사용하지 않는 계정을 삭제해 주세요.",
+  development_account_managed_separately: "개발 계정 탭에서 이 계정을 관리해 주세요.",
   credential_expiry_invalid: "연결 키의 유효기간을 1일에서 365일 사이로 선택해 주세요.",
   credential_limit: "사용 가능한 연결 키가 너무 많습니다. 사용하지 않는 키를 회수해 주세요.",
   credential_not_found: "연결 키를 찾지 못했습니다. 목록을 새로고침해 주세요.",

@@ -13,15 +13,17 @@ import { ObservabilityView } from "./ObservabilityView";
 import { ManualSettingsView } from "./ManualSettingsView";
 import { StatsView } from "./StatsView";
 import { OperatorsView } from "./OperatorsView";
+import { DevelopmentAccountsView } from "./DevelopmentAccountsView";
 import { roleLabel } from "./operators";
 import { AuditView } from "./AuditView";
 import { dateTime } from "./types";
 import type { AdminSession, Overview } from "./types";
 
-type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats" | "operators" | "manual" | "observability" | "credentials";
+type View = "overview" | "members" | "roster" | "servers" | "discord" | "audit" | "stats" | "operators" | "manual" | "observability" | "credentials" | "development";
 const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "overview", label: "운영 현황", icon: "dashboard" },
   { id: "members", label: "회원 관리", icon: "check" },
+  { id: "development", label: "개발 계정", icon: "settings" },
   { id: "servers", label: "서버 관리", icon: "book" },
   { id: "roster", label: "회원 시트 동기화", icon: "book" },
   { id: "discord", label: "Discord 봇", icon: "settings" },
@@ -219,6 +221,7 @@ export function App() {
                 ? "회원과 서버 접근 정책의 현재 상태를 확인합니다."
                 : view === "members"
                   ? "서버별로 허용된 범위 안에서 사용자의 접근을 관리합니다."
+                  : view === "development" ? "테스트용 Minecraft 계정과 접속 조건을 관리합니다."
                   : view === "servers"
                     ? "연결된 서버와 서버별 접속 대상을 관리합니다."
                   : view === "discord"
@@ -234,7 +237,7 @@ export function App() {
               : "학교 계정으로 로그인해 등록된 운영자 권한을 확인합니다."}
           </p>
         </div>
-        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members" || view === "operators" || view === "manual" || view === "observability" || view === "credentials")) ? <button
+        {!(verified && (view === "servers" || view === "discord" || view === "stats" || view === "members" || view === "operators" || view === "manual" || view === "observability" || view === "credentials" || view === "development")) ? <button
           disabled={loading || busy}
           onClick={() => {
             setError("");
@@ -286,10 +289,13 @@ export function App() {
         <OperatorsView key={accessKey} csrfToken={auth.csrfToken} subjectId={admin.subjectId} now={now} onError={authorizationFailure} />
       ) : view === "members" ? (
         <MembersView key={accessKey} canWrite={canWrite} manageOperators={manageOperators}
+          onDevelopmentAccounts={() => setView("development")}
           csrfToken={auth.csrfToken}
           servers={overview.servers}
           onError={authorizationFailure}
         />
+      ) : view === "development" ? (
+        <DevelopmentAccountsView key={accessKey} csrfToken={auth.csrfToken} canWrite={canWrite} servers={overview.servers} onError={authorizationFailure} />
       ) : view === "servers" ? (
         <ServersView key={accessKey} canWrite={canWrite} csrfToken={auth.csrfToken} onError={authorizationFailure} onChanged={refreshOverview} />
       ) : view === "discord" ? (
