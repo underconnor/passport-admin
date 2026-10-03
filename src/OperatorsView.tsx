@@ -85,8 +85,9 @@ export function OperatorsView({ csrfToken, subjectId, now, onError }: { csrfToke
       <div className="operator-search-results">{results.map(member => {
         const registered = member.administrator || data?.operators.some(operator => operator.subjectId === member.id && operator.enabled);
         const pending = data?.invitations.some(invite => invite.subjectId === member.id && invitationStatus(invite, now) === "pending");
+        const development = member.identityProvider === "managed-development";
         const expired = !member.universityVerifiedUntil || new Date(member.universityVerifiedUntil).getTime() <= now;
-        return <div className="operator-row" key={member.id}><div className="operator-identity"><strong>{member.displayName}</strong><small>{member.studentId ?? "학번 미보관"} · {member.minecraft?.name ?? "Minecraft 미연결"}</small></div><button disabled={loading || !data || registered || pending || expired} onClick={() => setSelection({ kind: "invite", member })}>{registered ? "등록된 운영자" : pending ? "수락 대기" : expired ? "학교 재인증 필요" : "초대"}</button></div>;
+        return <div className="operator-row" key={member.id}><div className="operator-identity"><strong>{member.displayName}</strong><small>{development ? "개발 계정 · 학교 계정 없음" : member.studentId ?? "학번 미보관"} · {member.minecraft?.name ?? "Minecraft 미연결"}</small></div><button disabled={loading || !data || registered || pending || expired || development} onClick={() => setSelection({ kind: "invite", member })}>{development ? "초대 불가" : registered ? "등록된 운영자" : pending ? "수락 대기" : expired ? "학교 재인증 필요" : "초대"}</button></div>;
       })}</div>
     </section>
     <section className="panel" aria-labelledby="operator-list-heading"><div className="panel-head"><h2 id="operator-list-heading">운영자 목록</h2><span className="status-label">{data?.operators.filter(operator => operator.enabled).length ?? 0}명 활성</span></div>

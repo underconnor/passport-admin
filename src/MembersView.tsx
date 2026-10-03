@@ -12,6 +12,7 @@ import type {
 } from "./types";
 
 function currentMembership(member: Member) {
+  if (member.identityProvider === "managed-development" && member.developmentAccount?.enabled === false) return { label: "개발 계정 비활성", tone: "member-kind-suspended" };
   if (member.accessSuspended) return { label: "접근 정지", tone: "member-kind-suspended" };
   if (member.membershipStatus === "suspended") return { label: "명부 정지", tone: "member-kind-suspended" };
   if (member.membershipStatus === "active") return new Date(member.verifiedUntil).getTime() > Date.now()
@@ -277,8 +278,8 @@ function DeleteMemberDialog({ member, csrfToken, onClose, onSaved, onError }: {
   </Dialog>;
 }
 
-export function MembersView({ csrfToken, servers, onError, canWrite, manageOperators }: {
-  csrfToken: string; servers: ServerDefinition[]; onError: ReportError; canWrite: boolean; manageOperators: boolean;
+export function MembersView({ csrfToken, servers, onError, canWrite, manageOperators, onDevelopmentAccounts }: {
+  csrfToken: string; servers: ServerDefinition[]; onError: ReportError; canWrite: boolean; manageOperators: boolean; onDevelopmentAccounts: () => void;
 }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [queryInput, setQueryInput] = useState("");
@@ -340,25 +341,25 @@ export function MembersView({ csrfToken, servers, onError, canWrite, manageOpera
       <div className="member-list-labels" aria-hidden="true"><span>사용자</span><span>회원 구분</span><span>Minecraft</span><span>Discord</span><span /></div>
       {members.map(member => <article className="member-row" key={member.id}>
         <button className="member-summary" aria-expanded={expanded === member.id} aria-controls={`member-detail-${member.id}`} onClick={() => { setExpanded(expanded === member.id ? null : member.id); setEditing(null); setStatsMember(null); }}>
-          <span className="member-summary-name"><strong>{member.displayName}</strong><small>{member.studentId || "학교 재인증 필요"} · {member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</small></span>
+          <span className="member-summary-name"><strong>{member.displayName}{member.identityProvider === "managed-development" ? <span className="development-badge">개발</span> : null}</strong><small>{member.identityProvider === "managed-development" ? "학교 계정 없음 · 테스트 설정 적용" : <>{member.studentId || "학교 재인증 필요"} · {member.department || "학과 정보 없음"}{member.administrator ? " · 관리자" : ""}</>}</small></span>
           <span className={`member-kind ${currentMembership(member).tone}`}>{currentMembership(member).label}</span>
           <span className="member-summary-minecraft">{member.minecraft?.name ?? "연결 없음"}{member.presence ? <span className={`member-presence ${member.presence.online ? "is-online" : ""}`}><span className="presence-dot" /><span>{member.presence.online ? `접속 중${member.presence.serverLabel ? ` · ${member.presence.serverLabel}` : ""}` : "오프라인"}</span></span> : null}</span>
-          <span className="member-summary-discord">{member.discordConnection?.displayName || member.discordConnection?.username || (member.discordId ? member.discordId : "연결 없음")}</span>
+          <span className="member-summary-discord">{member.identityProvider === "managed-development" ? member.developmentAccount?.discordLinked ? "연동 가정" : "미연동 가정" : member.discordConnection?.displayName || member.discordConnection?.username || (member.discordId ? member.discordId : "연결 없음")}</span>
           <span className="row-chevron" aria-hidden="true">{expanded === member.id ? "−" : "+"}</span>
         </button>
         {expanded === member.id ? <div className="member-expanded" id={`member-detail-${member.id}`}>
           <dl className="member-facts">
-            <div><dt>학번</dt><dd>{member.studentId || "학교 재인증 필요"}</dd></div>
+            <div><dt>학번</dt><dd>{member.identityProvider === "managed-development" ? "학교 계정 없음" : member.studentId || "학교 재인증 필요"}</dd></div>
             <div><dt>Minecraft</dt><dd>{member.minecraft?.name ?? "연결 없음"}</dd></div>
-            <div><dt>Discord</dt><dd>{member.discordConnection ? <>{member.discordConnection.username}<small>{member.discordConnection.discordId} · {discordRoleLabels[member.discordConnection.roleStatus]}</small></> : member.discordId ?? "연결 없음"}</dd></div>
+            <div><dt>Discord</dt><dd>{member.identityProvider === "managed-development" ? member.developmentAccount?.discordLinked ? "연동 가정 (실제 연결 없음)" : "미연동 가정" : member.discordConnection ? <>{member.discordConnection.username}<small>{member.discordConnection.discordId} · {discordRoleLabels[member.discordConnection.roleStatus]}</small></> : member.discordId ?? "연결 없음"}</dd></div>
             {member.presence ? <div><dt>현재 접속</dt><dd>{member.presence.online ? member.presence.serverLabel || "접속 중" : "오프라인"}<small>마지막 확인 {dateTime(member.presence.lastSeenAt)}</small></dd></div> : null}
-            <div><dt>명부 확인 유효 시점</dt><dd>{dateTime(member.verifiedUntil)}</dd></div>
+            {member.identityProvider !== "managed-development" ? <div><dt>명부 확인 유효 시점</dt><dd>{dateTime(member.verifiedUntil)}</dd></div> : null}
             <div><dt>접근 범위</dt><dd>{member.scopeRestricted ? member.scopeLimit.length ? member.scopeLimit.map(id => servers.find(server => server.id === id)?.label ?? id).join(", ") : "모든 서버 제한" : "서버 정책 적용"}</dd></div>
           </dl>
           {canWrite && (!member.administrator || manageOperators) && editing === member.id ? <MemberEditor member={member} servers={servers} csrfToken={csrfToken} onClose={() => setEditing(null)} onSaved={saved} onError={onError} /> : <div className="member-actions">
             {canWrite && (!member.administrator || manageOperators) ? <button onClick={() => setEditing(member.id)}>접근 제한 수정</button> : null}
-            <button onClick={() => setStatsMember(statsMember === member.id ? null : member.id)} aria-expanded={statsMember === member.id}>플레이 기록</button>
-            {canWrite && (!member.administrator || manageOperators) ? <><button className="text-button" disabled={!member.minecraft} onClick={() => setSelection({ member, action: "unlink" })}>Minecraft 연결 해제</button>
+            {member.identityProvider === "managed-development" ? <button onClick={onDevelopmentAccounts}>개발 계정 설정</button> : <button onClick={() => setStatsMember(statsMember === member.id ? null : member.id)} aria-expanded={statsMember === member.id}>플레이 기록</button>}
+            {member.identityProvider !== "managed-development" && canWrite && (!member.administrator || manageOperators) ? <><button className="text-button" disabled={!member.minecraft} onClick={() => setSelection({ member, action: "unlink" })}>Minecraft 연결 해제</button>
             <button className="text-button" disabled={!member.discordConnection && !member.discordId} onClick={() => setSelection({ member, action: "unlink-discord" })}>Discord 연결 해제</button>
             <button className="text-button danger member-delete" onClick={() => setSelection({ member, action: "delete" })}>회원 정보 삭제</button></> : null}
           </div>}

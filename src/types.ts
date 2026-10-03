@@ -48,6 +48,8 @@ export interface Overview {
   servers: ServerDefinition[];
 }
 export interface Member {
+  identityProvider?: string;
+  developmentAccount?: { enabled: boolean; discordLinked: boolean } | null;
   id: string;
   revision: string;
   createdAt: string;
