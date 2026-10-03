@@ -84,6 +84,31 @@ test('server member picker and Discord access conditions', { timeout: 360000 }, 
   const origin = `http://127.0.0.1:${server.address().port}`;
   const scenario = (name, execute) => t.test(name, { skip: Boolean(process.env.PASSPORT_BROWSER_CASE && !name.includes(process.env.PASSPORT_BROWSER_CASE)) }, execute);
   try {
+    await scenario('only three access modes are offered; legacy roster displays and saves as current club members', async () => {
+      reset(); state.server.accessMode = 'roster'; state.server.allowedSubjectIds = [];
+      await open(origin);
+      assert.equal(await inspect('document.querySelector(".server-summary-policy").textContent'), '소모임 회원 전체');
+      assert.equal(await inspect('document.querySelector("#server-access").value'), 'members');
+      assert.deepEqual(await inspect('[...document.querySelectorAll("#server-access option")].map(option=>option.value)'), ['members', 'selected', 'university']);
+      assert.equal(await inspect('document.querySelector(".admin-dialog").textContent.includes("명부")'), false);
+      assert.match(await inspect('document.querySelector(".admin-dialog").textContent'), /현재 소모임 회원 모두/);
+      assert.equal(await inspect('[...document.querySelectorAll("nav button")].some(button=>button.textContent.includes("회원 시트 동기화"))'), true);
+      assert.equal(state.writes.length, 0); assert.equal(state.queries.length, 0);
+      await browser('set', 'viewport', '1440', '1000'); await browser('screenshot', path.join(output, 'server-three-modes-desktop.png'));
+      await browser('set', 'viewport', '390', '844'); assert.equal(await inspect('document.documentElement.scrollWidth<=innerWidth'), true);
+      await browser('screenshot', path.join(output, 'server-three-modes-mobile.png'));
+      await click('설정 저장'); await until('document.querySelector(".admin-dialog")===null');
+      assert.equal(state.writes[0].body.accessMode, 'members'); assert.equal(state.writes[0].body.discordRequirement, 'any');
+      assert.deepEqual(state.writes[0].body.allowedSubjectIds, []); assert.equal(state.writes[0].csrf, 'synthetic-csrf');
+      assert.equal(state.writes[0].body.expectedUpdatedAt, '2026-10-02T00:00:00.000Z');
+      reset(); await open(origin); // Changing the local mode must not clear selected IDs.
+      await browser('select', '#server-access', 'members'); await browser('select', '#server-access', 'university');
+      await browser('select', '#server-discord-requirement', 'linked'); await browser('select', '#server-access', 'selected');
+      assert.equal(await inspect('document.querySelectorAll(".server-picker-tabs button")[1].textContent'), '선택됨 13명');
+      await click('설정 저장'); await until('document.querySelector(".admin-dialog")===null');
+      assert.equal(state.writes[0].body.accessMode, 'selected'); assert.equal(state.writes[0].body.discordRequirement, 'any');
+      assert.deepEqual(state.writes[0].body.allowedSubjectIds, original);
+    });
     await scenario('123 accounts stay search-only; pages replace results and preserve hidden or unresolved selections', async () => {
       reset(); await open(origin); await browser('set', 'viewport', '1440', '1000');
       assert.equal(state.queries.length, 0); assert.deepEqual(await visibleIds(), []);
@@ -157,8 +182,8 @@ test('server member picker and Discord access conditions', { timeout: 360000 }, 
         await click('설정 저장'); await until('document.querySelector(".admin-dialog")===null'); assert.equal(state.writes[0].body.discordRequirement, requirement);
       }
       reset(); state.server.accessMode = 'university'; state.server.discordRequirement = 'linked'; await open(origin);
-      await browser('select', '#server-access', 'roster'); assert.equal(await inspect('document.querySelector("#server-discord-requirement")===null'), true);
-      assert.match(await inspect('document.querySelector(".admin-dialog").textContent'), /명부 동기화로 부여된 서버 권한/);
+      await browser('select', '#server-access', 'members'); assert.equal(await inspect('document.querySelector("#server-discord-requirement")===null'), true);
+      assert.match(await inspect('document.querySelector(".admin-dialog").textContent'), /현재 소모임 회원 모두/);
       await click('설정 저장'); await until('document.querySelector(".admin-dialog")===null'); assert.equal(state.writes[0].body.discordRequirement, 'any');
       reset(); state.server.accessMode = 'university'; delete state.server.discordRequirement; await open(origin);
       assert.equal(await inspect('document.querySelector("#server-discord-requirement").disabled'), true);

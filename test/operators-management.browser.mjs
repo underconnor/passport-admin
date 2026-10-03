@@ -85,7 +85,7 @@ test('multi-operator UI respects invitation lifecycle and role boundaries with s
       reset();state.role='viewer';await open(origin);assert.equal(await inspect('[...document.querySelectorAll("nav button")].some(button=>button.textContent.includes("운영자 관리"))'),false);
       await click('회원 관리');await until('Boolean(document.querySelector(".member-summary"))');await browser('click','.member-summary');assert.equal(await inspect('document.querySelectorAll(".member-actions button").length'),1);assert.equal(await inspect('document.querySelector(".member-actions button").textContent'),'플레이 기록');
       await click('서버 관리');await until('Boolean(document.querySelector(".server-summary"))');await browser('click','.server-summary');assert.equal(await inspect('document.querySelectorAll(".server-expanded button").length'),0);
-      await click('명부 동기화');assert.equal(await inspect('document.body.textContent.includes("새 명부 미리보기")'),false);
+      await click('회원 시트 동기화');assert.equal(await inspect('document.body.textContent.includes("새 명부 미리보기")'),false);
       await click('Discord 봇');await until('Boolean(document.querySelector(".discord-fields"))');assert.equal(await inspect('document.querySelector(".discord-fields").disabled'),true);assert.equal(await inspect('Boolean(document.querySelector(".discord-save,.discord-reconcile"))'),false);assert.equal(state.writes.length,0);
       state.role='operator';state.rows[0].administrator=true;await open(origin);await click('회원 관리');await until('Boolean(document.querySelector(".member-summary"))');await browser('click','.member-summary');assert.equal(await inspect('document.querySelectorAll(".member-actions button").length'),1);assert.equal(state.reads.includes('/v1/admin/operators'),false);
     });

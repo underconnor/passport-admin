@@ -88,7 +88,7 @@ export function RosterView({
     <div className="stack">
       <section className="panel">
         <div className="panel-head">
-          <h2>회원 명부 동기화</h2>
+          <h2>회원 시트 동기화</h2>
           <span className="status-label">
             {overview.sync.running
               ? "동기화 중"

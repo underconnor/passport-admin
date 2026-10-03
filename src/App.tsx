@@ -23,7 +23,7 @@ const navigation: { id: View; label: string; icon: IconName }[] = [
   { id: "overview", label: "운영 현황", icon: "dashboard" },
   { id: "members", label: "회원 관리", icon: "check" },
   { id: "servers", label: "서버 관리", icon: "book" },
-  { id: "roster", label: "명부 동기화", icon: "book" },
+  { id: "roster", label: "회원 시트 동기화", icon: "book" },
   { id: "discord", label: "Discord 봇", icon: "settings" },
   { id: "stats", label: "플레이 통계", icon: "dashboard" },
   { id: "operators", label: "운영자 관리", icon: "check" },
@@ -229,7 +229,7 @@ export function App() {
                   : view === "manual" ? "회원 포털에 표시할 Notion 이용 안내를 등록합니다."
                   : view === "stats" ? "전체 사용자와 서버별 플레이 기록을 확인합니다."
                   : view === "roster"
-                    ? "새 명부를 확인한 뒤 회원 정책에 반영합니다."
+                    ? "구글시트의 소모임 회원 정보를 확인하고 반영합니다."
                     : "관리 작업과 회원 정책 변경을 확인합니다."
               : "학교 계정으로 로그인해 등록된 운영자 권한을 확인합니다."}
           </p>

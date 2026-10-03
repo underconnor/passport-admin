@@ -6,8 +6,10 @@ import type { ManagedServer, ReportError } from "./types";
 import { normalizeServerCommandName, serverCommandNameError } from "./server-settings";
 import { ServerMemberPicker } from "./ServerMemberPicker";
 
-const accessLabels = { roster: "명부 기본 권한", members: "소모임 회원 전체", selected: "선택한 회원", university: "학교 인증 사용자 전체" };
+const accessLabels = { members: "소모임 회원 전체", selected: "선택한 회원", university: "학교 인증 사용자 전체" };
 const discordLabels = { any: "무관", linked: "연동한 사용자만", unlinked: "연동하지 않은 사용자만" };
+// Accept older API responses at the boundary; edits always use the current three modes.
+type ManagedServerResponse = Omit<ManagedServer, "accessMode"> & { accessMode: ManagedServer["accessMode"] | "roster" };
 
 function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }: {
   server: ManagedServer; servers: ManagedServer[]; csrfToken: string; onClose: () => void;
@@ -67,14 +69,12 @@ function ServerEditor({ server, servers, csrfToken, onClose, onSaved, onError }:
     </label>
     <label className="field-label" htmlFor="server-access">접속 대상</label>
     <select id="server-access" value={accessMode} onChange={e => setAccessMode(e.target.value as ManagedServer["accessMode"])} disabled={busy}>
-      <option value="roster">명부 기본 권한</option>
       <option value="members">소모임 회원 전체</option>
       <option value="selected">선택한 회원만</option>
       <option value="university">학교 인증 사용자 전체 · 비회원 포함</option>
     </select>
     <p className="helper field-help">모든 방식에 유효한 학교 인증과 개인별 접근 제한이 적용됩니다.</p>
-    {accessMode === "members" ? <p className="helper warning">이 서버를 활성화하면 명부에 별도 서버 권한이 없어도 활성 회원이 접속할 수 있습니다.</p> : null}
-    {accessMode === "roster" ? <p className="helper field-help">명부 동기화로 부여된 서버 권한을 따릅니다.</p> : null}
+    {accessMode === "members" ? <p className="helper field-help">현재 소모임 회원 모두 접속할 수 있습니다.</p> : null}
     {accessMode === "selected" ? <p className="helper field-help">학교 인증 사용자 중 선택한 회원만 접속할 수 있습니다.</p> : null}
     {accessMode === "university" ? <p className="helper warning">소모임 회원이 아닌 학교 인증 사용자도 접속할 수 있습니다.</p> : null}
     {accessMode === "university" ? <>
@@ -116,8 +116,8 @@ export function ServersView({ csrfToken, onError, onChanged, canWrite }: {
     const sequence = ++requestSequence.current;
     setLoading(true); setError("");
     try {
-      const result = await api<{ servers: ManagedServer[] }>("/admin/servers", { signal });
-      if (!signal?.aborted && sequence === requestSequence.current) setServers(result.servers);
+      const result = await api<{ servers: ManagedServerResponse[] }>("/admin/servers", { signal });
+      if (!signal?.aborted && sequence === requestSequence.current) setServers(result.servers.map(server => ({ ...server, accessMode: server.accessMode === "roster" ? "members" : server.accessMode })));
     } catch (failure) { if (!signal?.aborted && sequence === requestSequence.current) { setError(errorMessage(failure)); onError(failure); } }
     finally { if (sequence === requestSequence.current) setLoading(false); }
   }, [onError]);
